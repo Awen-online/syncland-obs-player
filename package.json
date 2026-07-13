@@ -1,0 +1,35 @@
+{
+  "name": "syncland-obs-player",
+  "version": "0.1.0",
+  "description": "DMCA-safe music player for OBS Studio. Streams your Sync.Land licensed playlists with per-track license verification and automatic attribution overlay.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173"
+  },
+  "keywords": [
+    "obs",
+    "obs-studio",
+    "twitch",
+    "youtube-live",
+    "streaming",
+    "dmca-safe",
+    "music-licensing",
+    "sync-land",
+    "cardano"
+  ],
+  "author": "Awen LLC",
+  "license": "MIT",
+  "homepage": "https://sync.land/dock/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Awen-online/syncland-obs-player.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Awen-online/syncland-obs-player/issues"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
