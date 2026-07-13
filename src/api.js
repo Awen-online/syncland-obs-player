@@ -14,7 +14,11 @@ const API_BASE =
   (import.meta.env && import.meta.env.VITE_SYNCLAND_API) ||
   'https://sync.land/wp-json/FML/v1';
 
-let stubMode = true; // v0.1 — flip to false when real endpoints land
+// Stubs default off — the backend is live. Set `?stub=1` in the URL, or
+// VITE_STUB_MODE=1 in .env.local, to force stubs during dev without a token.
+const urlStub = typeof location !== 'undefined' && new URLSearchParams(location.search).get('stub') === '1';
+const envStub = !!(import.meta.env && import.meta.env.VITE_STUB_MODE === '1');
+let stubMode  = urlStub || envStub;
 
 export function setStubMode(on) { stubMode = !!on; }
 export function isStub() { return stubMode; }
