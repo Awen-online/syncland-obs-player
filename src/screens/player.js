@@ -102,8 +102,11 @@ export function renderPlayer($app, { playlistId, onBack, onSignOut }) {
   async function loadCurrentTrack() {
     const t = state.tracks[state.index];
     if (!t) return;
+    const pos = `${state.index + 1} / ${state.tracks.length}`;
+    const dur = t.duration ? ` · ${fmtDuration(t.duration)}` : '';
     $title.textContent  = t.title;
-    $artist.textContent = t.artist;
+    $artist.textContent = `${t.artist}  —  ${pos}${dur}`;
+    setArt(t.cover_url || '');
     $clear.innerHTML    = `<span class="sp-badge" style="background: rgba(255,255,255,0.06); color: var(--sp-text-muted); border: 1px solid rgba(255,255,255,0.12);">Checking…</span>`;
     $attr.textContent   = '';
     try {
@@ -112,6 +115,10 @@ export function renderPlayer($app, { playlistId, onBack, onSignOut }) {
       renderStatus('err', `License check failed — ${e.message}`);
       $clear.innerHTML = '<span class="sp-badge blocked">Blocked</span>';
       return;
+    }
+    // Prefer the clearance-response cover (higher-res, always current) over the list snapshot.
+    if (state.clearance.song && state.clearance.song.cover_url) {
+      setArt(state.clearance.song.cover_url);
     }
     if (!state.clearance.can_stream) {
       $clear.innerHTML = `<span class="sp-badge blocked">Blocked</span><span class="sp-badge" style="background: transparent; color: var(--sp-text-muted);">${state.clearance.reason_if_blocked || 'no_license'}</span>`;
@@ -172,5 +179,22 @@ export function renderPlayer($app, { playlistId, onBack, onSignOut }) {
 
   function renderStatus(kind, msg) {
     $status.innerHTML = msg ? `<div class="sp-status ${kind}">${msg}</div>` : '';
+  }
+
+  function setArt(url) {
+    const $art = $app.querySelector('#pl-art');
+    if (!$art) return;
+    if (url) {
+      $art.innerHTML = `<img src="${url}" alt="" loading="lazy" onerror="this.remove()">`;
+    } else {
+      $art.innerHTML = '';
+    }
+  }
+
+  function fmtDuration(seconds) {
+    const s = Math.max(0, Math.round(seconds));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${r.toString().padStart(2, '0')}`;
   }
 }

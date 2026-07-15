@@ -150,8 +150,14 @@ body.overlay-mode #app {
   cursor: pointer; transition: border-color 0.15s, background 0.15s;
 }
 .sp-list-item:hover { border-color: rgba(226,55,178,0.4); background: rgba(226,55,178,0.05); }
-.sp-list-item .sp-title { flex: 1 1 auto; font-weight: 700; }
-.sp-list-item .sp-meta { color: var(--sp-text-muted); font-size: 12px; }
+.sp-list-item .sp-list-thumb {
+  width: 44px; height: 44px; border-radius: 6px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--sp-pink), var(--sp-blue));
+  background-size: cover; background-position: center;
+}
+.sp-list-item .sp-list-body { flex: 1 1 auto; min-width: 0; }
+.sp-list-item .sp-title { flex: 0 0 auto; font-weight: 700; }
+.sp-list-item .sp-meta { color: var(--sp-text-muted); font-size: 12px; margin-top: 2px; }
 
 /* ---------- Player ---------- */
 .sp-player {

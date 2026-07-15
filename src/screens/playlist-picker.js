@@ -47,8 +47,11 @@ async function loadAndRender($list, onPick) {
     }
     const html = resp.playlists.map((p) => `
       <li class="sp-list-item" data-id="${p.id}">
-        <div class="sp-title">${escapeHtml(p.name)}</div>
-        <div class="sp-meta">${p.track_count} track${p.track_count === 1 ? '' : 's'}</div>
+        <div class="sp-list-thumb" ${p.cover_url ? `style="background-image:url('${p.cover_url.replace(/'/g, "%27")}')"` : ''}></div>
+        <div class="sp-list-body">
+          <div class="sp-title">${escapeHtml(p.name)}</div>
+          <div class="sp-meta">${p.track_count} track${p.track_count === 1 ? '' : 's'}</div>
+        </div>
       </li>
     `).join('');
     $list.innerHTML = `<ul class="sp-list">${html}</ul>`;
