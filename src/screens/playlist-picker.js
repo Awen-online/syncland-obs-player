@@ -1,11 +1,13 @@
 import { listPlaylists, clearToken, saveLastPlaylist } from '../api.js';
+import { openSetupPanel } from '../setup-panel.js';
 
 export function renderPlaylistPicker($app, { onPick, onSignOut }) {
   $app.innerHTML = `
     <header class="sp-header">
-      <div class="sp-logo">♪</div>
+      <img class="sp-logo" src="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" alt="Sync.Land" width="28" height="28">
       <div class="sp-brand">Sync.Land <small>OBS Player</small></div>
       <div style="flex:1 1 auto;"></div>
+      <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">Add to OBS</button>
       <button class="sp-btn sp-btn-secondary" id="pp-signout" style="padding: 6px 12px; font-size: 12px;">Sign out</button>
     </header>
     <main class="sp-screen">
@@ -18,11 +20,12 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
       <div id="pp-list"><div class="sp-status info">Loading…</div></div>
     </main>
     <footer class="sp-footer">
-      <span>v${'0.1.0'} · scaffold</span>
+      <span>v0.2.0</span>
       <span><a href="https://sync.land/account/" target="_blank">Manage on sync.land</a></span>
     </footer>
   `;
 
+  $app.querySelector('#obs-setup').addEventListener('click', openSetupPanel);
   $app.querySelector('#pp-signout').addEventListener('click', () => {
     clearToken();
     onSignOut();
@@ -63,7 +66,7 @@ async function loadAndRender($list, onPick) {
       });
     });
   } catch (e) {
-    $list.innerHTML = `<div class="sp-status err">Couldn't load playlists — ${escapeHtml(e.message)}</div>`;
+    $list.innerHTML = `<div class="sp-status err">Couldn't load playlists - ${escapeHtml(e.message)}</div>`;
   }
 }
 

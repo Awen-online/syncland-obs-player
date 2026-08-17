@@ -3,7 +3,7 @@ import { saveToken, whoAmI, isStub } from '../api.js';
 export function renderPatScreen($app, { onSignIn }) {
   $app.innerHTML = `
     <header class="sp-header">
-      <div class="sp-logo">♪</div>
+      <img class="sp-logo" src="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" alt="Sync.Land" width="28" height="28">
       <div class="sp-brand">Sync.Land <small>OBS Player</small></div>
     </header>
     <main class="sp-screen">
@@ -37,7 +37,7 @@ export function renderPatScreen($app, { onSignIn }) {
       </div>
     </main>
     <footer class="sp-footer">
-      <span>v${'0.1.0'} · scaffold</span>
+      <span>v0.2.0</span>
       <span><a href="https://sync.land/free-sync-license/" target="_blank">SLFS-v1</a></span>
     </footer>
   `;
@@ -63,7 +63,7 @@ export function renderPatScreen($app, { onSignIn }) {
       setTimeout(() => onSignIn(), 500);
     } catch (e) {
       $connect.disabled = false;
-      renderStatus($status, 'err', `That token didn't work — ${e.message}`);
+      renderStatus($status, 'err', `That token didn't work - ${e.message}`);
     }
   });
 

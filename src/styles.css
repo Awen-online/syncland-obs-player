@@ -206,3 +206,606 @@ body.overlay-mode #app {
 }
 .sp-footer a { color: var(--sp-text-soft); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 1px; }
 .sp-footer a:hover { color: var(--sp-pink); border-bottom-color: var(--sp-pink); }
+
+
+/* ── Licence verification panel ──────────────────────────────────────
+   Sized to stay legible in a screen recording: this block is the visible
+   proof for M4 criterion 3, so it has to read at video bitrate, not just
+   on a desktop monitor. */
+.sp-verify {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-left: 3px solid var(--sp-pink);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+}
+.sp-verify-head { display: flex; align-items: center; gap: 8px; }
+.sp-verify-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sp-text-muted); flex: 0 0 auto; }
+.sp-verify-dot.ok      { background: var(--sp-good); box-shadow: 0 0 0 3px rgba(75,189,136,.22); }
+.sp-verify-dot.blocked { background: var(--sp-bad); box-shadow: 0 0 0 3px rgba(252,129,129,.22); }
+.sp-verify-dot.pending { background: var(--sp-orange); }
+.sp-verify-title { font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.sp-verify-meta  { margin-left: auto; font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+                   font-size: 11px; color: var(--sp-text-muted); font-variant-numeric: tabular-nums; }
+.sp-verify-url   { display: block; margin-top: 8px; font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+                   font-size: 11px; line-height: 1.5; color: var(--sp-text-soft); word-break: break-all; }
+.sp-verify-license { margin-top: 8px; font-size: 15px; font-weight: 700; }
+.sp-verify-sub     { margin-top: 2px; font-size: 11.5px; color: var(--sp-text-muted); }
+.sp-verify-copy {
+  margin-top: 10px; padding: 6px 12px; font-size: 11.5px; font-weight: 600;
+  color: #fff; background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18); border-radius: 7px; cursor: pointer;
+}
+.sp-verify-copy:hover { background: rgba(255,255,255,0.16); }
+
+
+/* The real Sync.Land mark replaces the placeholder glyph. Sized to match the
+   old circular badge so the header rhythm is unchanged. */
+.sp-header img.sp-logo {
+  width: 28px; height: 28px; border-radius: 8px;
+  object-fit: contain; background: transparent; display: block;
+}
+
+/* ── Lower third (overlay mode v0.2) ─────────────────────────────────
+   Composited straight over the scene by OBS, so the background stays
+   transparent and the card carries its own contrast. Sized for 1080p:
+   readable at a glance without eating the frame. */
+body.overlay-mode { background: transparent !important; overflow: hidden; }
+body.overlay-mode #app { min-height: 100vh; display: block; }
+
+.sp-ov {
+  position: fixed;
+  display: flex; align-items: center; gap: 14px;
+  max-width: 720px;
+  padding: 12px 16px;
+  background: var(--sp-ov-bg, rgba(14, 14, 26, 0.82));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-left: 3px solid var(--sp-pink);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  color: #fff; font-family: var(--sp-font);
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .35s ease, transform .35s ease;
+  pointer-events: none;
+}
+.sp-ov.visible { opacity: 1; transform: translateY(0); }
+
+/* placement */
+body.ov-bl .sp-ov { left: 40px;  bottom: 40px; }
+body.ov-br .sp-ov { right: 40px; bottom: 40px; }
+body.ov-tl .sp-ov { left: 40px;  top: 40px; }
+body.ov-tr .sp-ov { right: 40px; top: 40px; }
+body.ov-bc .sp-ov { left: 50%; bottom: 40px; transform: translate(-50%, 10px); }
+body.ov-bc .sp-ov.visible { transform: translate(-50%, 0); }
+body.ov-tc .sp-ov { left: 50%; top: 40px; transform: translate(-50%, -10px); }
+body.ov-tc .sp-ov.visible { transform: translate(-50%, 0); }
+
+.sp-ov-art {
+  width: 56px; height: 56px; border-radius: 8px; object-fit: cover;
+  flex: 0 0 56px; background: rgba(255,255,255,.06);
+}
+.sp-ov-body { min-width: 0; }
+.sp-ov-eyebrow {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  font-weight: 800; color: var(--sp-pink); margin-bottom: 3px;
+}
+.sp-ov-pip {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--sp-pink);
+  animation: sp-ov-pulse 2s ease-in-out infinite;
+}
+@keyframes sp-ov-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+@media (prefers-reduced-motion: reduce) {
+  .sp-ov-pip { animation: none }
+  .sp-ov { transition: none }
+}
+.sp-ov-title {
+  color: var(--sp-text);
+  font-size: 17px; font-weight: 700; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-ov-artist { font-size: 13.5px; color: var(--sp-text-soft); margin-top: 1px; }
+.sp-ov-attr { color: var(--sp-text); }
+.sp-ov-attr {
+  /* This is the compliance line — the whole reason the overlay exists — and it
+     was 11px muted monospace, which is unreadable at stream bitrate on a
+     phone. Sans, larger, near-white, and given its own separated block so it
+     does not read as a caption. */
+  margin-top: 8px; padding-top: 7px;
+  border-top: 1px solid rgba(255,255,255,.14);
+  font-size: 14px; line-height: 1.35; font-weight: 600;
+  color: #EDEFF7; letter-spacing: .003em;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+body.ov-compact .sp-ov-attr { font-size: 13px; }
+.sp-ov-brand {
+  margin-left: auto; flex: 0 0 auto; align-self: center;
+  display: flex; align-items: center; gap: 8px;
+  padding-left: 14px; border-left: 1px solid rgba(255,255,255,.12);
+}
+.sp-ov-brand img { width: 26px; height: 26px; display: block; object-fit: contain; }
+.sp-ov-brand span {
+  font-size: 15px; font-weight: 800; letter-spacing: -.02em; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+.sp-ov-brand b { color: var(--sp-pink); font-weight: 800; }
+body.ov-compact .sp-ov-brand { padding-left: 10px; gap: 6px; }
+body.ov-compact .sp-ov-brand img { width: 20px; height: 20px; }
+body.ov-compact .sp-ov-brand span { font-size: 13px; }
+
+/* compact: title + artist only */
+body.ov-compact .sp-ov { max-width: 460px; padding: 10px 14px; }
+body.ov-compact .sp-ov-title { font-size: 15px; }
+
+/* Idle marker for the overlay Browser Source. Deliberately visible: a blank
+   source is indistinguishable from a broken one. Fades itself out after 25s
+   so it never lands on a live stream; ?debug=1 keeps it up. */
+.sp-ov-wait {
+  position: fixed; left: 40px; bottom: 40px;
+  padding: 8px 14px; border-radius: 8px;
+  background: rgba(14,14,26,.72); border: 1px dashed rgba(226,55,178,.5);
+  color: var(--sp-text-soft); font-family: var(--sp-font); font-size: 12.5px;
+  pointer-events: none;
+}
+
+/* ── OBS setup dialog ─────────────────────────────────────────────── */
+.sp-setup-backdrop {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(6,6,14,.66); backdrop-filter: blur(3px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 20px; overflow-y: auto;
+}
+.sp-setup {
+  width: 100%; max-width: 620px;
+  background: var(--sp-bg-card); border: 1px solid var(--sp-border);
+  border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,.55);
+  color: var(--sp-text); font-family: var(--sp-font);
+}
+.sp-setup-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 20px; border-bottom: 1px solid var(--sp-border);
+}
+.sp-setup-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.sp-setup-x {
+  margin-left: auto; background: none; border: 0; color: var(--sp-text-muted);
+  font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.sp-setup-x:hover { color: #fff; }
+.sp-setup-body { padding: 20px; }
+.sp-step { display: flex; gap: 14px; margin-bottom: 22px; }
+.sp-step-n {
+  flex: 0 0 26px; height: 26px; border-radius: 50%;
+  background: var(--sp-pink); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+}
+.sp-step-c { min-width: 0; flex: 1 1 auto; }
+.sp-step-c h3 { margin: 2px 0 6px; font-size: 15px; font-weight: 700; }
+.sp-step-c p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.55; color: var(--sp-text-soft); }
+.sp-cp { margin: 10px 0; }
+.sp-cp-label {
+  font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--sp-text-muted); font-weight: 700; margin-bottom: 5px;
+}
+.sp-cp-row { display: flex; align-items: stretch; gap: 8px; }
+.sp-cp-val {
+  flex: 1 1 auto; min-width: 0; padding: 9px 11px;
+  background: rgba(0,0,0,.32); border: 1px solid var(--sp-border);
+  border-radius: 8px; font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px; color: var(--sp-text); overflow-x: auto; white-space: nowrap;
+}
+.sp-cp-btn {
+  flex: 0 0 auto; padding: 0 14px; cursor: pointer;
+  background: var(--sp-pink); color: #fff; border: 0; border-radius: 8px;
+  font-size: 12.5px; font-weight: 700;
+}
+.sp-cp-btn:hover { filter: brightness(1.1); }
+.sp-cp-btn.done { background: var(--sp-good); }
+.sp-note {
+  font-size: 12.5px; line-height: 1.55; color: var(--sp-text-muted);
+  background: rgba(255,255,255,.04); border-left: 2px solid var(--sp-orange);
+  padding: 9px 12px; border-radius: 0 8px 8px 0; margin: 10px 0 0;
+}
+.sp-note-last { margin-top: 18px; border-left-color: var(--sp-pink); }
+.sp-more { margin-top: 6px; border-top: 1px solid var(--sp-border); padding-top: 14px; }
+.sp-more summary { cursor: pointer; font-size: 13.5px; font-weight: 700; }
+.sp-more-body { padding-top: 8px; }
+.sp-obs-btn { margin-right: 8px; }
+
+/* ── Persistent player bar ───────────────────────────────────────────
+   Mounted once by main.js and never torn down, so audio survives screen
+   changes and controls are always reachable. Mirrors the silhouette of
+   sync.land's own sticky footer player. */
+body.has-player-bar { padding-bottom: 84px; }
+.sp-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+  background: rgba(20, 20, 38, .96); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--sp-border);
+  font-family: var(--sp-font);
+}
+.sp-bar-seek { height: 4px; background: rgba(255,255,255,.08); cursor: pointer; }
+.sp-bar-seek:focus-visible { outline: 2px solid var(--sp-pink); outline-offset: -2px; }
+.sp-bar-seek-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--sp-pink), var(--sp-orange)); }
+.sp-bar-inner {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 16px; min-height: 66px;
+}
+.sp-bar-art {
+  width: 44px; height: 44px; border-radius: 6px; object-fit: cover;
+  flex: 0 0 44px; background: rgba(255,255,255,.06);
+}
+.sp-bar-meta { min-width: 0; flex: 1 1 auto; }
+.sp-bar-title {
+  font-size: 14px; font-weight: 700; color: var(--sp-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-bar-sub {
+  font-size: 12px; color: var(--sp-text-muted); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-bar-controls { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.sp-bar-btn {
+  width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  color: var(--sp-text); font-size: 13px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.sp-bar-btn:hover:not(:disabled) { background: rgba(255,255,255,.14); }
+.sp-bar-btn.play {
+  width: 40px; height: 40px; font-size: 15px;
+  background: var(--sp-pink); border-color: var(--sp-pink); color: #fff;
+}
+.sp-bar-btn:disabled { opacity: .4; cursor: default; }
+.sp-bar-time {
+  font-size: 11.5px; color: var(--sp-text-muted); flex: 0 0 auto;
+  font-variant-numeric: tabular-nums; min-width: 84px; text-align: right;
+}
+.sp-bar-right { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.sp-bar-lic {
+  font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+  white-space: nowrap;
+}
+.sp-bar-lic.ok      { color: var(--sp-good); background: rgba(75,189,136,.14); }
+.sp-bar-lic.bad     { color: var(--sp-bad);  background: rgba(252,129,129,.14); }
+.sp-bar-lic.pending { color: var(--sp-orange); background: rgba(240,145,77,.14); }
+.sp-bar-vol { width: 84px; accent-color: var(--sp-pink); }
+.sp-bar.idle .sp-bar-title { color: var(--sp-text-muted); font-weight: 600; }
+@media (max-width: 640px) {
+  .sp-bar-time, .sp-bar-vol { display: none; }
+  .sp-bar-inner { gap: 10px; padding: 8px 12px; }
+}
+
+/* ── Track list ──────────────────────────────────────────────────── */
+.sp-tracklist { list-style: none; margin: 22px 0 0; padding: 0; }
+.sp-track {
+  display: flex; align-items: center; gap: 12px; cursor: pointer;
+  padding: 9px 12px; border-radius: 8px; font-size: 13.5px;
+  border: 1px solid transparent;
+}
+.sp-track:hover { background: rgba(255,255,255,.04); }
+.sp-track.current {
+  background: rgba(226,55,178,.10); border-color: rgba(226,55,178,.30);
+}
+.sp-track-n {
+  flex: 0 0 24px; text-align: right; color: var(--sp-text-muted);
+  font-variant-numeric: tabular-nums; font-size: 12px;
+}
+.sp-track.current .sp-track-n { color: var(--sp-pink); }
+.sp-track-t { flex: 1 1 auto; color: var(--sp-text); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-track-a { flex: 0 0 auto; color: var(--sp-text-muted); font-size: 12px; }
+
+/* ── Surface banner: OBS vs browser ──────────────────────────────── */
+.sp-surface {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 16px; font-size: 12.5px; font-family: var(--sp-font);
+  background: rgba(240,145,77,.12); border-bottom: 1px solid rgba(240,145,77,.35);
+  color: var(--sp-text-soft);
+}
+.sp-surface.ok { background: rgba(75,189,136,.10); border-bottom-color: rgba(75,189,136,.32); }
+.sp-surface b { color: var(--sp-text); }
+.sp-surface-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--sp-orange); flex: 0 0 auto;
+}
+.sp-surface.ok .sp-surface-dot { background: var(--sp-good); }
+.sp-surface-link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--sp-pink); font-weight: 700; font-size: 12.5px; text-decoration: underline;
+}
+.sp-surface-x {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--sp-text-muted); font-size: 20px; line-height: 1; padding: 0 4px;
+}
+
+/* ── Duck / fade / fader ─────────────────────────────────────────── */
+.sp-chip {
+  padding: 5px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  font-size: 11.5px; font-weight: 700; color: var(--sp-text-soft);
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14);
+}
+.sp-chip:hover { background: rgba(255,255,255,.13); color: var(--sp-text); }
+.sp-chip.on {
+  color: #fff; background: var(--sp-pink); border-color: var(--sp-pink);
+}
+#pb-duck.on { background: var(--sp-orange); border-color: var(--sp-orange); color: #1a1a2e; }
+
+.sp-vol { display: flex; align-items: center; gap: 7px; }
+.sp-vol-mute {
+  width: 26px; height: 26px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14);
+  color: var(--sp-good); font-size: 9px; line-height: 1;
+}
+.sp-vol-mute.muted { color: var(--sp-bad); }
+.sp-bar-vol {
+  width: 132px; accent-color: var(--sp-pink); cursor: pointer;
+}
+.sp-vol-num {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px;
+  color: var(--sp-text-muted); min-width: 22px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-fadepop {
+  position: absolute; right: 14px; bottom: 74px; width: 250px; z-index: 510;
+  background: var(--sp-bg-card); border: 1px solid var(--sp-border);
+  border-radius: 12px; padding: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.55);
+}
+.sp-fp-row {
+  display: flex; align-items: center; gap: 9px; font-size: 12.5px;
+  color: var(--sp-text-soft); margin-bottom: 12px; cursor: pointer;
+}
+.sp-fp-row.col { flex-direction: column; align-items: stretch; gap: 6px; }
+.sp-fp-row b { color: var(--sp-text); float: right; }
+.sp-fp-row input[type=range] { width: 100%; accent-color: var(--sp-pink); }
+.sp-fp-note { margin: 0; font-size: 11.5px; color: var(--sp-text-muted); line-height: 1.5; }
+
+/* ── Narrow-dock layout ──────────────────────────────────────────────
+   An OBS Custom Browser Dock is a panel, frequently under 500px wide, not a
+   browser window. The first cut of this bar was laid out at desktop width and
+   pushed the volume fader off the edge, and its media query hid the fader
+   below 640px — exactly the wrong casualty. Nothing here ever hides volume or
+   transport; the clock goes first, then the chips shed their labels. */
+.sp-bar-inner { flex-wrap: wrap; row-gap: 8px; }
+.sp-bar-meta  { flex: 1 1 130px; }
+.sp-bar-right { margin-left: auto; min-width: 0; }
+
+/* licence: fixed-size glyph, not a text pill */
+.sp-bar-lic {
+  width: 20px; height: 20px; flex: 0 0 20px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 11px; font-weight: 800; cursor: help;
+}
+.sp-bar-lic:empty { display: none; }
+
+@media (max-width: 700px) {
+  .sp-bar-time { display: none; }
+}
+@media (max-width: 560px) {
+  /* transport + right-hand group drop to their own row rather than overflow */
+  .sp-bar-meta { flex: 1 1 100%; order: 1; }
+  .sp-bar-controls { order: 2; }
+  .sp-bar-right { order: 3; }
+  .sp-bar-art { width: 34px; height: 34px; flex-basis: 34px; }
+  .sp-bar-inner { padding: 8px 12px 10px; }
+}
+@media (max-width: 460px) {
+  /* chips lose their words, keep their meaning */
+  #pb-duck { font-size: 0; padding: 5px 9px; }
+  #pb-duck::after { content: "\1F507"; font-size: 12px; }
+  #pb-fade { font-size: 0; padding: 5px 9px; }
+  #pb-fade::after { content: "\223F"; font-size: 13px; }
+  .sp-bar-vol { width: 74px; }
+  .sp-vol-num { display: none; }
+}
+@media (max-width: 360px) {
+  .sp-bar-vol { width: 56px; }
+  .sp-bar-btn { width: 30px; height: 30px; }
+  .sp-bar-btn.play { width: 34px; height: 34px; }
+}
+/* the fade popover must stay inside a narrow dock */
+.sp-fadepop { right: 10px; left: auto; max-width: calc(100vw - 20px); }
+
+/* ── Settings screen ─────────────────────────────────────────────── */
+.sp-set {
+  background: rgba(255,255,255,.03); border: 1px solid var(--sp-border);
+  border-radius: 12px; margin: 14px 0 6px; overflow: hidden;
+}
+.sp-set-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 15px 16px; border-top: 1px solid var(--sp-border);
+}
+.sp-set-row:first-child { border-top: 0; }
+.sp-set-row.col { flex-direction: column; align-items: stretch; gap: 10px; }
+.sp-set-copy { flex: 1 1 auto; min-width: 0; }
+.sp-set-copy b { display: block; font-size: 13.5px; font-weight: 700; color: var(--sp-text); }
+.sp-set-copy b em { font-style: normal; color: var(--sp-pink); margin-left: 6px; font-variant-numeric: tabular-nums; }
+.sp-set-copy span { display: block; font-size: 12px; color: var(--sp-text-muted); line-height: 1.5; margin-top: 3px; }
+.sp-set-copy kbd {
+  background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.16);
+  border-radius: 4px; padding: 1px 5px; font-size: 11px; font-family: ui-monospace, Menlo, monospace;
+}
+.sp-set-row input[type=range] { width: 100%; accent-color: var(--sp-pink); }
+.sp-set-row.col input[type=range] { max-width: 100%; }
+.sp-set-h2 {
+  font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--sp-text-muted); font-weight: 700; margin: 26px 0 0;
+}
+.sp-switch { width: 42px; height: 24px; accent-color: var(--sp-pink); flex: 0 0 auto; cursor: pointer; }
+.sp-set-tag {
+  flex: 0 0 auto; font-size: 10.5px; font-weight: 700; padding: 4px 9px;
+  border-radius: 999px; font-family: ui-monospace, Menlo, monospace;
+}
+.sp-set-tag.ok   { color: var(--sp-good); background: rgba(75,189,136,.14); }
+.sp-set-tag.warn { color: var(--sp-orange); background: rgba(240,145,77,.14); }
+.sp-chip.icon { font-size: 13px; padding: 5px 9px; line-height: 1; }
+
+/* ── Output row on the player screen ─────────────────────────────────
+   The bar's fader is deliberately small so it survives a narrow OBS dock.
+   This screen has room, so it gets a fader you can actually land on. Both
+   drive the same playback singleton and stay in sync. */
+.sp-out {
+  display: flex; align-items: center; gap: 12px;
+  margin: 22px 0 4px; padding: 12px 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--sp-border); border-radius: 10px;
+}
+.sp-out-mute {
+  width: 30px; height: 30px; flex: 0 0 30px; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14);
+  color: var(--sp-good); font-size: 10px; line-height: 1;
+}
+.sp-out-mute.muted { color: var(--sp-bad); }
+.sp-out-fader { flex: 1 1 auto; min-width: 0; accent-color: var(--sp-pink); height: 22px; cursor: pointer; }
+.sp-out-num {
+  flex: 0 0 auto; min-width: 30px; text-align: right;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px;
+  color: var(--sp-text-muted); font-variant-numeric: tabular-nums;
+}
+@media (max-width: 460px) {
+  .sp-out { gap: 9px; padding: 10px; }
+  .sp-out-num { display: none; }
+}
+
+/* ── Themes ──────────────────────────────────────────────────────────
+   Every theme is a variable override; no component knows themes exist.
+   `dark` is the base declared at the top of this file, repeated here so
+   switching back is a real assignment rather than a removal. */
+:root[data-theme="dark"] {
+  --sp-bg: #0e0e1a; --sp-bg-card: #1f1f33;
+  --sp-border: rgba(255,255,255,.08);
+  --sp-text: #e7ebf3; --sp-text-soft: rgba(231,235,243,.72); --sp-text-muted: rgba(231,235,243,.48);
+  --sp-pink: #E237B2; --sp-orange: #F0914D; --sp-blue: #2F6ED3;
+}
+:root[data-theme="light"] {
+  --sp-bg: #F4F3F8; --sp-bg-card: #FFFFFF;
+  --sp-border: rgba(18,18,40,.12);
+  --sp-text: #14142B; --sp-text-soft: rgba(20,20,43,.70); --sp-text-muted: rgba(20,20,43,.50);
+  --sp-pink: #C21E93; --sp-orange: #C06414; --sp-blue: #1F52A8;
+  --sp-good: #1F7A52; --sp-bad: #B3261E;
+}
+:root[data-theme="midnight"] {
+  --sp-bg: #070B18; --sp-bg-card: #101A33;
+  --sp-border: rgba(120,160,255,.14);
+  --sp-text: #E6ECFB; --sp-text-soft: rgba(230,236,251,.72); --sp-text-muted: rgba(230,236,251,.46);
+  --sp-pink: #6E8BFF; --sp-orange: #F0914D; --sp-blue: #2F6ED3;
+}
+:root[data-theme="ember"] {
+  --sp-bg: #170D08; --sp-bg-card: #26170F;
+  --sp-border: rgba(255,190,140,.14);
+  --sp-text: #F6ECE4; --sp-text-soft: rgba(246,236,228,.72); --sp-text-muted: rgba(246,236,228,.46);
+  --sp-pink: #F0914D; --sp-orange: #E2573B; --sp-blue: #2F6ED3;
+}
+:root[data-theme="mono"] {
+  --sp-bg: #111113; --sp-bg-card: #1D1D21;
+  --sp-border: rgba(255,255,255,.10);
+  --sp-text: #ECECEF; --sp-text-soft: rgba(236,236,239,.70); --sp-text-muted: rgba(236,236,239,.45);
+  --sp-pink: #A9A9B4; --sp-orange: #A9A9B4; --sp-blue: #A9A9B4;
+}
+
+/* Light needs the bar and cards to stop assuming a dark ground. */
+:root[data-theme="light"] .sp-bar { background: rgba(255,255,255,.96); }
+:root[data-theme="light"] .sp-bar-btn,
+:root[data-theme="light"] .sp-chip,
+:root[data-theme="light"] .sp-vol-mute,
+:root[data-theme="light"] .sp-out-mute { background: rgba(18,18,40,.05); border-color: rgba(18,18,40,.14); }
+:root[data-theme="light"] .sp-set,
+:root[data-theme="light"] .sp-out { background: #fff; }
+:root[data-theme="light"] .sp-track:hover { background: rgba(18,18,40,.04); }
+:root[data-theme="light"] .sp-bar-seek { background: rgba(18,18,40,.10); }
+:root[data-theme="light"] .sp-verify { background: rgba(18,18,40,.03); }
+/* The overlay stays legible over any scene regardless of theme. */
+:root[data-theme="light"] .sp-ov { background: rgba(255,255,255,.92); }
+:root[data-theme="light"] .sp-ov-title,
+:root[data-theme="light"] .sp-ov-attr,
+:root[data-theme="light"] .sp-ov-brand span { color: #14142B; text-shadow: none; }
+
+/* ── Theme picker ────────────────────────────────────────────────── */
+.sp-themes { display: flex; gap: 10px; flex-wrap: wrap; }
+.sp-theme {
+  flex: 0 0 auto; cursor: pointer; padding: 0; border-radius: 10px;
+  border: 2px solid transparent; background: none; text-align: center;
+}
+.sp-theme .sw {
+  width: 64px; height: 40px; border-radius: 8px; display: block;
+  border: 1px solid var(--sp-border); overflow: hidden; position: relative;
+}
+.sp-theme .sw i { position: absolute; left: 7px; bottom: 7px; width: 18px; height: 5px; border-radius: 3px; }
+.sp-theme .lb { display: block; font-size: 11px; margin-top: 5px; color: var(--sp-text-muted); }
+.sp-theme.on { border-color: var(--sp-pink); }
+.sp-theme.on .lb { color: var(--sp-text); font-weight: 700; }
+
+
+/* Overlay ground per theme. Kept as its own token because the card is
+   translucent and you cannot add alpha to a hex custom property in CSS. */
+:root[data-theme="dark"]     { --sp-ov-bg: rgba(14,14,26,.82); }
+:root[data-theme="light"]    { --sp-ov-bg: rgba(255,255,255,.90); }
+:root[data-theme="midnight"] { --sp-ov-bg: rgba(7,11,24,.84); }
+:root[data-theme="ember"]    { --sp-ov-bg: rgba(23,13,8,.84); }
+:root[data-theme="mono"]     { --sp-ov-bg: rgba(17,17,19,.84); }
+/* Light needs dark ink and no glow to stay readable over a bright scene. */
+:root[data-theme="light"] .sp-ov-title,
+:root[data-theme="light"] .sp-ov-attr,
+:root[data-theme="light"] .sp-ov-brand span { color: #14142B; text-shadow: none; }
+:root[data-theme="light"] .sp-ov-artist { color: rgba(20,20,43,.68); }
+:root[data-theme="light"] .sp-ov-attr { border-top-color: rgba(18,18,40,.16); }
+:root[data-theme="light"] .sp-ov { border-color: rgba(18,18,40,.12); }
+:root[data-theme="light"] .sp-ov-brand { border-left-color: rgba(18,18,40,.14); }
+
+/* ── Now-playing block on the player screen ──────────────────────────
+   The transport moved to the persistent bar, which left this screen with no
+   actual player on it and the volume stranded under the track list. This is
+   the player: art, track, scrubber, transport and level in one place. The bar
+   stays as the always-there control while you browse. */
+.sp-now {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 16px; margin: 18px 0 6px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--sp-border); border-radius: 12px;
+}
+.sp-now-art {
+  width: 96px; height: 96px; flex: 0 0 96px; border-radius: 10px;
+  object-fit: cover; background: rgba(255,255,255,.06);
+}
+.sp-now-body { flex: 1 1 auto; min-width: 0; }
+.sp-now-title {
+  font-size: 18px; font-weight: 700; color: var(--sp-text); line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sp-now-sub { font-size: 13px; color: var(--sp-text-muted); margin-top: 2px; }
+.sp-now-bar {
+  height: 5px; border-radius: 3px; background: rgba(255,255,255,.10);
+  margin: 12px 0 4px; cursor: pointer; overflow: hidden;
+}
+.sp-now-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--sp-pink), var(--sp-orange)); }
+.sp-now-time {
+  display: flex; justify-content: space-between; font-size: 11px;
+  color: var(--sp-text-muted); font-variant-numeric: tabular-nums;
+}
+.sp-now-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.sp-now-transport { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+.sp-now-row .sp-out-fader { flex: 1 1 90px; }
+@media (max-width: 520px) {
+  .sp-now { gap: 12px; padding: 12px; }
+  .sp-now-art { width: 64px; height: 64px; flex-basis: 64px; }
+  .sp-now-row .sp-out-num { display: none; }
+}
+
+/* ── Mute buttons ────────────────────────────────────────────────────
+   Were a bare ● that read as decoration. Now a drawn speaker that gains an X
+   when muted, with a red wash so the muted state is obvious at a glance and
+   not only by colour. */
+.sp-vol-mute, .sp-out-mute {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; transition: background .15s, color .15s, border-color .15s;
+}
+.sp-vol-mute { width: 30px; height: 30px; flex-basis: 30px; }
+.sp-out-mute { width: 34px; height: 34px; flex-basis: 34px; }
+.sp-vol-mute svg, .sp-out-mute svg { display: block; }
+.sp-vol-mute:hover, .sp-out-mute:hover { background: rgba(255,255,255,.16); color: var(--sp-text); }
+.sp-vol-mute.muted, .sp-out-mute.muted {
+  color: #fff; background: var(--sp-bad); border-color: var(--sp-bad);
+}
+.sp-vol-mute.muted:hover, .sp-out-mute.muted:hover { filter: brightness(1.12); background: var(--sp-bad); }

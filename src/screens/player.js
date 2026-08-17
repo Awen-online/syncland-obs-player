@@ -1,200 +1,231 @@
-import { listPlaylists, getTrackClearance, logPlay, clearToken, isStub } from '../api.js';
+import { isStub, getLastVerification } from '../api.js';
+import { openSetupPanel } from '../setup-panel.js';
+import * as pb from '../playback.js';
+import { speakerIcon } from '../icons.js';
 
 /**
- * Player screen — plays through a playlist track-by-track, license-checking
- * each one before playback. Renders an attribution overlay when required.
+ * Player screen.
  *
- * The audio element is kept simple: HTMLAudioElement + play/pause. When the
- * real API returns a signed stream_url, this just works. In stub mode, we
- * simulate a track with a synthetic silent buffer + a wall-clock advancer so
- * the UI behavior is testable without needing audio assets.
+ * Transport now lives in the persistent bar (player-bar.js) driven by the
+ * playback singleton, so this screen is only: the playlist, its tracks, and
+ * the licence verification panel. Navigating away no longer stops the music
+ * or orphans an audio element.
+ *
+ * The verification panel stays here rather than in the bar because it is the
+ * M4 evidence surface — it wants room to show the endpoint, status and body.
  */
-export function renderPlayer($app, { playlistId, onBack, onSignOut }) {
-  const state = {
-    playlist: null,
-    tracks:   [],
-    index:    0,
-    playing:  false,
-    clearance: null,
-    audio: new Audio(),
-  };
-  state.audio.preload = 'auto';
-
+export function renderPlayer($app, { playlistId, onBack }) {
   $app.innerHTML = `
     <header class="sp-header">
-      <div class="sp-logo">♪</div>
+      <img class="sp-logo" src="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" alt="Sync.Land" width="28" height="28">
       <div class="sp-brand">Sync.Land <small>OBS Player</small></div>
       <div style="flex:1 1 auto;"></div>
-      <button class="sp-btn sp-btn-secondary" id="pl-back"    style="padding:6px 12px; font-size:12px;">← Playlists</button>
+      <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">Add to OBS</button>
+      <button class="sp-btn sp-btn-secondary" id="pl-back" style="padding:6px 12px; font-size:12px;">← Playlists</button>
     </header>
     <main class="sp-screen">
-      <div id="pl-header">
-        <div class="sp-eyebrow">Now playing</div>
-        <h1 class="sp-h1" id="pl-playlist-name">Loading…</h1>
-      </div>
+      <div class="sp-eyebrow">Now playing</div>
+      <h1 class="sp-h1" id="pl-playlist-name">Loading…</h1>
 
-      <div class="sp-player" id="pl-player" style="display:none;">
-        <div class="sp-art" id="pl-art"></div>
-        <div>
-          <div class="sp-track-title" id="pl-title">—</div>
-          <div class="sp-artist" id="pl-artist">—</div>
-          <div class="sp-clearance" id="pl-clearance"></div>
-          <div class="sp-controls">
-            <button class="sp-icon-btn"      id="pl-prev"    title="Previous">⏮</button>
-            <button class="sp-icon-btn play" id="pl-toggle"  title="Play / pause">▶</button>
-            <button class="sp-icon-btn"      id="pl-next"    title="Next">⏭</button>
+      <section class="sp-now" id="pl-now">
+        <img class="sp-now-art" id="pl-art" alt="">
+        <div class="sp-now-body">
+          <div class="sp-now-title" id="pl-nowtitle">Nothing playing</div>
+          <div class="sp-now-sub"   id="pl-nowsub">Pick a track below</div>
+          <div class="sp-now-bar" id="pl-seek"><div class="sp-now-fill" id="pl-fill"></div></div>
+          <div class="sp-now-time"><span id="pl-pos">0:00</span><span id="pl-dur">0:00</span></div>
+          <div class="sp-now-row">
+            <div class="sp-now-transport">
+              <button class="sp-bar-btn" id="pl-prev" title="Previous">&#9198;</button>
+              <button class="sp-bar-btn play" id="pl-toggle" title="Play / pause">&#9654;</button>
+              <button class="sp-bar-btn" id="pl-next" title="Next">&#9197;</button>
+            </div>
+            <button class="sp-out-mute" id="pl-mute" title="Mute (M)" aria-label="Mute"></button>
+            <input class="sp-out-fader" id="pl-vol" type="range" min="0" max="1" step="0.01" aria-label="Volume">
+            <span class="sp-out-num" id="pl-volnum">85</span>
+            <button class="sp-chip" id="pl-duck" title="Duck under speech (D)">Duck</button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div id="pl-attribution" style="margin-top: 8px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--sp-text-muted);"></div>
+      <section class="sp-verify" id="pl-verify" hidden>
+        <div class="sp-verify-head">
+          <span class="sp-verify-dot" id="pv-dot"></span>
+          <span class="sp-verify-title" id="pv-title">Checking licence…</span>
+          <span class="sp-verify-meta" id="pv-meta"></span>
+        </div>
+        <code class="sp-verify-url" id="pv-url"></code>
+        <div class="sp-verify-license" id="pv-license"></div>
+        <div class="sp-verify-sub" id="pv-sub"></div>
+        <button class="sp-verify-copy" id="pv-copy" type="button">Copy verification receipt</button>
+      </section>
+
+      <div id="pl-attribution" style="margin-top:10px; font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:12px; color:var(--sp-text-muted);"></div>
       <div id="pl-status"></div>
 
-      ${isStub() ? '<p style="color: var(--sp-text-muted); font-size: 12px; margin-top: 12px;">Stub mode: no actual audio. UI is driven by simulated track progression to validate the flow.</p>' : ''}
-    </main>
-    <footer class="sp-footer">
-      <span>v0.1.0 · scaffold</span>
-      <span><a href="https://sync.land/free-sync-license/" target="_blank">SLFS-v1</a></span>
-    </footer>
-  `;
+      <ol class="sp-tracklist" id="pl-tracks"></ol>
 
-  $app.querySelector('#pl-back').addEventListener('click', onBack);
 
-  const $status = $app.querySelector('#pl-status');
-  const $player = $app.querySelector('#pl-player');
-  const $title  = $app.querySelector('#pl-title');
-  const $artist = $app.querySelector('#pl-artist');
-  const $clear  = $app.querySelector('#pl-clearance');
-  const $attr   = $app.querySelector('#pl-attribution');
-  const $toggle = $app.querySelector('#pl-toggle');
-  const $prev   = $app.querySelector('#pl-prev');
-  const $next   = $app.querySelector('#pl-next');
-  const $name   = $app.querySelector('#pl-playlist-name');
+      ${isStub() ? '<p style="color:var(--sp-text-muted);font-size:12px;margin-top:12px;">Stub mode: no real audio. Track progression is simulated to validate the flow.</p>' : ''}
+    </main>`;
 
-  $toggle.addEventListener('click', () => togglePlay());
-  $prev.addEventListener('click', () => step(-1));
-  $next.addEventListener('click', () => step(+1));
+  const $ = (s) => $app.querySelector(s);
+  const $name = $('#pl-playlist-name');
+  const $attr = $('#pl-attribution');
+  const $stat = $('#pl-status');
+  const $list = $('#pl-tracks');
+  const $verify = $('#pl-verify');
+  const $pvDot = $('#pv-dot'), $pvTitle = $('#pv-title'), $pvMeta = $('#pv-meta');
+  const $pvUrl = $('#pv-url'), $pvLic = $('#pv-license'), $pvSub = $('#pv-sub');
 
-  init();
+  const $vol = $('#pl-vol'), $volNum = $('#pl-volnum');
+  const $art = $('#pl-art'), $nowTitle = $('#pl-nowtitle'), $nowSub = $('#pl-nowsub');
+  const $toggle = $('#pl-toggle'), $seek = $('#pl-seek'), $fill = $('#pl-fill');
+  const $pos = $('#pl-pos'), $dur = $('#pl-dur');
 
-  // ------------------------------------------------------------------
-  async function init() {
-    try {
-      const resp = await listPlaylists();
-      state.playlist = (resp.playlists || []).find((p) => p.id === playlistId);
-      state.tracks   = (resp.tracks && resp.tracks[playlistId]) || [];
-      if (!state.playlist) {
-        renderStatus('err', 'Playlist not found. It may have been deleted.');
-        return;
-      }
-      $name.textContent = state.playlist.name;
-      if (!state.tracks.length) {
-        renderStatus('info', 'This playlist has no tracks yet.');
-        return;
-      }
-      $player.style.display = 'grid';
-      await loadCurrentTrack();
-    } catch (e) {
-      renderStatus('err', `Could not load playlist — ${e.message}`);
-    }
+  $toggle.addEventListener('click', pb.togglePlay);
+  $('#pl-prev').addEventListener('click', () => pb.step(-1));
+  $('#pl-next').addEventListener('click', () => pb.step(+1));
+  $seek.addEventListener('click', (e) => {
+    if (!pb.state.duration) return;
+    const r = $seek.getBoundingClientRect();
+    pb.seek(((e.clientX - r.left) / r.width) * pb.state.duration);
+  });
+  const $mute = $('#pl-mute'), $duck = $('#pl-duck');
+
+  // Same singleton the bar drives, so the two faders track each other.
+  $vol.addEventListener('input', (e) => pb.setVolume(parseFloat(e.target.value)));
+  let premute = null;
+  $mute.addEventListener('click', () => {
+    if (premute === null) { premute = pb.getVolume(); pb.setVolume(0); }
+    else { pb.setVolume(premute); premute = null; }
+  });
+  $duck.addEventListener('click', pb.toggleDuck);
+
+  $('#pl-back').addEventListener('click', onBack);
+  $('#obs-setup').addEventListener('click', openSetupPanel);
+
+  // The receipt is the artefact the M4 submission needs: one paste carrying
+  // endpoint, status, timing and the full verdict body.
+  $('#pv-copy').addEventListener('click', async (e) => {
+    const v = getLastVerification();
+    if (!v) return;
+    const receipt = [
+      `${v.method} ${v.url}`,
+      `HTTP ${v.status} in ${v.ms}ms at ${v.at}${v.stub ? '  [STUB]' : ''}`,
+      '',
+      JSON.stringify(v.response, null, 2),
+    ].join('\n');
+    const btn = e.currentTarget;
+    try { await navigator.clipboard.writeText(receipt); btn.textContent = 'Copied'; }
+    catch (err) { btn.textContent = 'Copy failed'; }
+    setTimeout(() => { btn.textContent = 'Copy verification receipt'; }, 1800);
+  });
+
+  pb.loadPlaylist(playlistId);
+
+  const unsub = pb.subscribe((st) => {
+    $name.textContent = st.playlist ? st.playlist.name : (st.loading ? 'Loading…' : 'Playlist');
+
+    $stat.innerHTML = st.status
+      ? `<div class="sp-status ${st.status.kind}">${st.status.text}</div>` : '';
+
+    $attr.textContent = (st.clearance && st.clearance.attribution_required)
+      ? (st.clearance.attribution_text || '') : '';
+
+    const t = pb.currentTrack();
+    $nowTitle.textContent = t ? t.title : 'Nothing playing';
+    $nowSub.textContent = t
+      ? `${t.artist} · ${st.index + 1} of ${st.tracks.length}`
+      : 'Pick a track below';
+    const cover = (st.clearance && st.clearance.song && st.clearance.song.cover_url)
+      || (t && t.cover_url) || '';
+    if (cover) { $art.src = cover; $art.style.visibility = 'visible'; }
+    else { $art.removeAttribute('src'); $art.style.visibility = 'hidden'; }
+    $toggle.textContent = st.playing ? '⏸' : '▶';
+    $toggle.disabled = !(st.clearance && st.clearance.can_stream);
+    $pos.textContent = pb.fmtTime(st.position);
+    $dur.textContent = pb.fmtTime(st.duration);
+    $fill.style.width = st.duration
+      ? `${Math.min(100, (st.position / st.duration) * 100)}%` : '0%';
+
+    const uv = pb.getVolume();
+    if (document.activeElement !== $vol) $vol.value = uv;
+    $volNum.textContent = Math.round(uv * 100);
+    const isMuted = uv === 0;
+    $mute.classList.toggle('muted', isMuted);
+    $mute.innerHTML = speakerIcon(isMuted);
+    $mute.title = isMuted ? 'Unmute (M)' : 'Mute (M)';
+    $mute.setAttribute('aria-label', isMuted ? 'Unmute' : 'Mute');
+    $mute.setAttribute('aria-pressed', String(isMuted));
+    $duck.classList.toggle('on', pb.isDucked());
+    $duck.textContent = pb.isDucked() ? 'Ducked' : 'Duck';
+
+    renderVerify(st);
+    renderList(st);
+  });
+
+  // Screens are replaced wholesale; drop the subscription with the DOM.
+  const mo = new MutationObserver(() => {
+    if (!document.body.contains($list)) { unsub(); mo.disconnect(); }
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+
+  function renderList(st) {
+    if (!st.tracks.length) { $list.innerHTML = ''; return; }
+    $list.innerHTML = st.tracks.map((t, i) => `
+      <li class="sp-track${i === st.index ? ' current' : ''}" data-i="${i}">
+        <span class="sp-track-n">${i === st.index && st.playing ? '♪' : i + 1}</span>
+        <span class="sp-track-t">${escapeHtml(t.title)}</span>
+        <span class="sp-track-a">${escapeHtml(t.artist || '')}</span>
+      </li>`).join('');
+    $list.querySelectorAll('.sp-track').forEach((li) => {
+      li.addEventListener('click', () => {
+        const i = Number(li.dataset.i);
+        if (i === pb.state.index) { pb.togglePlay(); return; }
+        pb.step(i - pb.state.index);
+      });
+    });
   }
 
-  async function loadCurrentTrack() {
-    const t = state.tracks[state.index];
-    if (!t) return;
-    const pos = `${state.index + 1} / ${state.tracks.length}`;
-    const dur = t.duration ? ` · ${fmtDuration(t.duration)}` : '';
-    $title.textContent  = t.title;
-    $artist.textContent = `${t.artist}  —  ${pos}${dur}`;
-    setArt(t.cover_url || '');
-    $clear.innerHTML    = `<span class="sp-badge" style="background: rgba(255,255,255,0.06); color: var(--sp-text-muted); border: 1px solid rgba(255,255,255,0.12);">Checking…</span>`;
-    $attr.textContent   = '';
-    try {
-      state.clearance = await getTrackClearance(t.song_id);
-    } catch (e) {
-      renderStatus('err', `License check failed — ${e.message}`);
-      $clear.innerHTML = '<span class="sp-badge blocked">Blocked</span>';
+  function renderVerify(st) {
+    if (!st.verify) { $verify.hidden = true; return; }
+    $verify.hidden = false;
+    const v = getLastVerification();
+    if (!v || st.verify === 'pending') {
+      $pvDot.className = 'sp-verify-dot pending';
+      $pvTitle.textContent = 'Checking licence…';
+      $pvMeta.textContent = ''; $pvUrl.textContent = '';
+      $pvLic.textContent = ''; $pvSub.textContent = '';
       return;
     }
-    // Prefer the clearance-response cover (higher-res, always current) over the list snapshot.
-    if (state.clearance.song && state.clearance.song.cover_url) {
-      setArt(state.clearance.song.cover_url);
-    }
-    if (!state.clearance.can_stream) {
-      $clear.innerHTML = `<span class="sp-badge blocked">Blocked</span><span class="sp-badge" style="background: transparent; color: var(--sp-text-muted);">${state.clearance.reason_if_blocked || 'no_license'}</span>`;
-      renderStatus('err', `Skipping — this track can't stream (${state.clearance.reason_if_blocked || 'no_license'}).`);
-      setTimeout(() => step(+1), 1500);
-      return;
-    }
-    const tierClass = state.clearance.tier === 'commercial' ? 'paid' : state.clearance.tier === 'custom' ? 'custom' : 'free';
-    $clear.innerHTML = `<span class="sp-badge ${tierClass}">${state.clearance.tier_label}</span>` +
-      (state.clearance.attribution_required ? `<span class="sp-badge" style="background:transparent; color:var(--sp-text-muted);">Attribution required</span>` : '');
-    if (state.clearance.attribution_required) {
-      $attr.textContent = state.clearance.attribution_text;
-    }
-
-    // Load audio (real URL when live; stubs return empty string)
-    if (state.clearance.stream_url) {
-      state.audio.src = state.clearance.stream_url;
-      state.audio.load();
-    }
-
-    // Auto-advance when a real track ends
-    state.audio.onended = () => step(+1);
-  }
-
-  async function togglePlay() {
-    if (!state.clearance || !state.clearance.can_stream) return;
-    if (state.playing) {
-      state.audio.pause();
-      state.playing = false;
-      $toggle.textContent = '▶';
+    $pvUrl.textContent = `${v.method} ${v.url.replace(/^https?:\/\//, '')}`;
+    $pvMeta.textContent = `HTTP ${v.status} · ${v.ms}ms${v.stub ? ' · stub' : ''}`;
+    const c = v.response || {};
+    const when = `verified ${new Date(v.at).toUTCString().replace('GMT', 'UTC')}`;
+    if (st.verify === 'verified') {
+      $pvDot.className = 'sp-verify-dot ok';
+      $pvTitle.textContent = 'Licence verified';
+      $pvLic.textContent = c.tier_label || c.tier || 'Licensed';
+      $pvSub.textContent = [
+        c.attribution_required ? 'attribution required' : 'no attribution required', when,
+      ].join(' · ');
+    } else if (st.verify === 'blocked') {
+      $pvDot.className = 'sp-verify-dot blocked';
+      $pvTitle.textContent = 'Not licensed for streaming';
+      $pvLic.textContent = c.reason_if_blocked || 'no_license';
+      $pvSub.textContent = when;
     } else {
-      if (state.clearance.stream_url) {
-        try {
-          await state.audio.play();
-        } catch (e) {
-          renderStatus('err', `Playback failed — ${e.message}`);
-          return;
-        }
-      } else if (isStub()) {
-        // In stub mode we simulate a 25-second track and auto-advance.
-        renderStatus('info', 'Stub playback — simulating 25s track…');
-        setTimeout(() => { renderStatus('info', ''); step(+1); }, 25000);
-      }
-      state.playing = true;
-      $toggle.textContent = '⏸';
-      logPlay(state.tracks[state.index].song_id, 0).catch(() => {});
+      $pvDot.className = 'sp-verify-dot blocked';
+      $pvTitle.textContent = 'Verification failed';
+      $pvLic.textContent = `HTTP ${v.status}`;
+      $pvSub.textContent = typeof v.response === 'string' ? v.response.slice(0, 120) : '';
     }
   }
+}
 
-  function step(delta) {
-    if (!state.tracks.length) return;
-    state.audio.pause();
-    state.playing = false;
-    $toggle.textContent = '▶';
-    state.index = (state.index + delta + state.tracks.length) % state.tracks.length;
-    loadCurrentTrack();
-  }
-
-  function renderStatus(kind, msg) {
-    $status.innerHTML = msg ? `<div class="sp-status ${kind}">${msg}</div>` : '';
-  }
-
-  function setArt(url) {
-    const $art = $app.querySelector('#pl-art');
-    if (!$art) return;
-    if (url) {
-      $art.innerHTML = `<img src="${url}" alt="" loading="lazy" onerror="this.remove()">`;
-    } else {
-      $art.innerHTML = '';
-    }
-  }
-
-  function fmtDuration(seconds) {
-    const s = Math.max(0, Math.round(seconds));
-    const m = Math.floor(s / 60);
-    const r = s % 60;
-    return `${m}:${r.toString().padStart(2, '0')}`;
-  }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
 }

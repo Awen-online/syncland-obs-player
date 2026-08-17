@@ -10,9 +10,17 @@
  * end-to-end without a live backend. Flip to false once /streamer/* ships.
  */
 
+// Production ALWAYS talks to sync.land. The override is honoured only under
+// the dev server, because Vite ranks .env.local above .env.production — so a
+// developer's local file silently shipped `http://sync.local/...` into the
+// deployed bundle, and the dock could never reach prod. Gating on
+// import.meta.env.DEV makes that class of mistake impossible rather than
+// relying on remembering to move a file before building.
+const PROD_API = 'https://sync.land/wp-json/FML/v1';
 const API_BASE =
-  (import.meta.env && import.meta.env.VITE_SYNCLAND_API) ||
-  'https://sync.land/wp-json/FML/v1';
+  (import.meta.env && import.meta.env.DEV && import.meta.env.VITE_SYNCLAND_API)
+    ? import.meta.env.VITE_SYNCLAND_API
+    : PROD_API;
 
 // Stubs default off — the backend is live. Set `?stub=1` in the URL, or
 // VITE_STUB_MODE=1 in .env.local, to force stubs during dev without a token.
@@ -41,7 +49,7 @@ export function loadLastPlaylist()    { return localStorage.getItem(PLAYLIST_KEY
 // -------------------------------------------------------------------------
 async function request(path, opts = {}) {
   const token = loadToken();
-  if (!token) throw new Error('No PAT — user needs to sign in first');
+  if (!token) throw new Error('No PAT - user needs to sign in first');
   const url = `${API_BASE}${path}`;
   const r = await fetch(url, {
     ...opts,
@@ -73,9 +81,45 @@ export async function listPlaylists() {
   return request('/streamer/playlists');
 }
 
+/**
+ * The most recent clearance check, kept so the UI can *show* that a real
+ * public-API call verified the licence. M4 acceptance criterion 3 is
+ * "an external application is able to verify a sync license via public API",
+ * and the evidence asked for is a link to the successful request plus a
+ * screen recording — so the request itself has to be visible on camera,
+ * not just its result.
+ */
+let lastVerification = null;
+export function getLastVerification() { return lastVerification; }
+
 export async function getTrackClearance(song_id) {
-  if (stubMode) return stubClearance(song_id);
-  return request(`/streamer/track/${song_id}/clearance`);
+  const path = `/streamer/track/${song_id}/clearance`;
+  const url  = `${API_BASE}${path}`;
+  const t0   = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+  if (stubMode) {
+    const data = await stubClearance(song_id);
+    lastVerification = { method: 'GET', url, status: 200, ms: 0,
+                         at: new Date().toISOString(), stub: true, response: data };
+    return data;
+  }
+
+  const token = loadToken();
+  if (!token) throw new Error('No PAT - user needs to sign in first');
+  const r = await fetch(url, {
+    headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
+  });
+  const ms   = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0);
+  const text = await r.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch (e) { /* non-JSON body */ }
+
+  lastVerification = { method: 'GET', url, status: r.status, ms,
+                       at: new Date().toISOString(), stub: false,
+                       response: data !== null ? data : text.slice(0, 400) };
+
+  if (!r.ok) throw new Error(`API ${r.status}: ${text.slice(0, 300)}`);
+  return data;
 }
 
 export async function logPlay(song_id, seconds) {
@@ -124,8 +168,8 @@ function stubClearance(song_id) {
     tier: 'SLFS-v1',
     tier_label: 'Free Sync License',
     attribution_required: true,
-    attribution_text: `Music: ${meta.artist} — via Sync.Land — sync.land/song/${meta.slug}`,
-    stream_url: '', // no real audio in stub — player renders "stub mode" state
+    attribution_text: `Music: ${meta.artist} via Sync.Land · sync.land/song/${meta.slug}`,
+    stream_url: '', // no real audio in stub - player renders "stub mode" state
     reason_if_blocked: null,
     song: { id: song_id, title: meta.title, artist: meta.artist, slug: meta.slug },
   };

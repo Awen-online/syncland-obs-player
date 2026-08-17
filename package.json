@@ -1,6 +1,6 @@
 {
   "name": "syncland-obs-player",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DMCA-safe music player for OBS Studio. Streams your Sync.Land licensed playlists with per-track license verification and automatic attribution overlay.",
   "type": "module",
   "scripts": {
