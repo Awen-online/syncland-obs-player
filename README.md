@@ -57,13 +57,34 @@ The `/streamer/*` API is the security boundary. It validates the PAT against a S
 **As a Browser Source** (attribution overlay on your scene):
 1. In OBS: **Sources → + → Browser**
 2. Configure:
-   - **URL:** `https://sync.land/dock/?mode=overlay&token=<your-PAT>`
+   - **URL:** `https://sync.land/dock/?mode=overlay`
    - **Width:** 1920
    - **Height:** 300 (or wherever you want the attribution row)
    - **Custom CSS:** leave blank (the app renders its own transparent background)
+   - **Uncheck "Refresh browser when scene becomes active"** — left on, the overlay forgets what's playing every time you cut to that scene
 3. Place on your scene wherever the attribution should appear.
 
+**The overlay URL carries no token, and must not.** The dock drives it over a
+`BroadcastChannel` on the shared `sync.land` origin, so the overlay never calls
+the API and never needs a credential. OBS shows a source's URL in its properties
+dialog, which is a bad place to keep a working key to your catalogue — earlier
+versions of this document told you to append `&token=<your-PAT>` here, and that
+advice was wrong from v0.2.0 onward.
+
 You'll use both together: the dock to control what plays, the Browser Source to show the attribution on stream.
+
+### Why the overlay matters for audio, not just attribution
+
+A Custom Browser Dock is OBS *interface*, not a Source. Its audio goes to your
+system output device and never reaches the OBS mixer, so the only way to get it
+on stream is a Desktop Audio capture that also carries your notifications and
+every other system sound, with no per-source fader, filter or monitoring.
+
+A Browser Source gets a real mixer channel. So when the overlay is present it
+owns the `<audio>` element and the dock drives playback remotely, giving the
+music its own fader. Only one context ever holds the source; if you hear a
+doubled, slightly phase-offset copy of the track, both are playing and the
+handover didn't take.
 
 ## Developer setup
 
