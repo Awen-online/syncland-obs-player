@@ -1,10 +1,52 @@
-# Sync.Land OBS Player
+<p align="center">
+  <a href="https://sync.land">
+    <img src="https://www.sync.land/wp-content/uploads/2026/03/sync.land-logo-tag_transparent-1-1024x225.png" alt="Sync.Land" width="520">
+  </a>
+</p>
 
-DMCA-safe music player for OBS Studio. Authenticate with your Sync.Land account, play your licensed playlists on stream, and get per-track license verification with an automatic attribution overlay.
+<h1 align="center">Sync.Land OBS Player</h1>
 
-Runs as either:
-- an **OBS Custom Browser Dock** — a panel inside OBS you use to control playback, or
-- an **OBS Browser Source** — a transparent overlay layer on your scene that shows the "now playing" attribution.
+<p align="center">
+  <strong>Licensed music for live streams, with the licence checked on air.</strong><br>
+  Play your Sync.Land playlists inside OBS Studio, verify every track's sync licence<br>
+  against the public API before it plays, and render the required credit automatically.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.2.0-E237B2?style=flat-square" alt="Version 0.2.0">
+  <img src="https://img.shields.io/badge/license-Apache--2.0-2F6ED3?style=flat-square" alt="Apache 2.0">
+  <img src="https://img.shields.io/badge/OBS%20Studio-dock%20%2B%20source-212C9A?style=flat-square" alt="OBS Studio">
+  <img src="https://img.shields.io/badge/licence%20tier-SLFS--v1-F0914D?style=flat-square" alt="SLFS-v1">
+</p>
+
+<p align="center">
+  <a href="https://sync.land/dock/"><b>Live app</b></a> &nbsp;·&nbsp;
+  <a href="#add-to-obs">Add to OBS</a> &nbsp;·&nbsp;
+  <a href="docs/streamer-setup.md">Setup guide</a> &nbsp;·&nbsp;
+  <a href="docs/api.md">API reference</a> &nbsp;·&nbsp;
+  <a href="https://sync.land/free-sync-license/">SLFS-v1</a>
+</p>
+
+---
+
+<p align="center">
+  <img src="docs/images/01-dock-licence-verification.jpg" alt="The dock showing a licence verified against the Sync.Land API, with endpoint, HTTP status and latency on screen" width="820">
+  <br>
+  <em>The dock puts the verification on screen: endpoint, status, latency, verdict.</em>
+</p>
+
+Runs as either, and normally both at once:
+
+| Mode | What it is | What it does |
+|---|---|---|
+| **Custom Browser Dock** | A panel inside the OBS interface | The control surface: playlists, transport, licence verification, settings |
+| **Browser Source** | A transparent layer on your scene | The on-air attribution lower third — and the mixer channel your music plays through |
+
+<p align="center">
+  <img src="docs/images/02-overlay-lower-third.jpg" alt="The attribution lower third as it appears on stream" width="820">
+  <br>
+  <em>The overlay renders the credit SLFS-v1 requires, and changes with the track.</em>
+</p>
 
 ## Contents
 
@@ -135,7 +177,9 @@ The SPA is fully static and holds no secrets — mirror it anywhere. Two things 
 
 **Track shows "Blocked"** — the license state changed since you built the playlist. Common reasons: `no_license` (song was deleted), `artist_removed` (artist unpublished their profile), `artist_paused` (artist explicitly paused licensing on this track). The player skips to the next track automatically.
 
-**Audio doesn't play, no error** — check DevTools → Network. If the `stream_url` returns 200 but no sound, your OBS scene's audio isn't routed from the dock/browser-source. In OBS: right-click the source → **Audio Monitoring → Monitor and Output**.
+**Audio doesn't play, no error** — you are almost certainly running the dock alone. A Custom Browser Dock is OBS *interface*, not a Source: its audio goes to your system output and never reaches the mixer. Add the overlay as a Browser Source and it takes over playback on a real mixer channel. (Earlier versions of this file said to right-click the source and set **Audio Monitoring** — a dock is not a source and has no such menu.)
+
+**Doubled or phase-offset audio** — both the dock and the overlay are holding the audio element. Only one context may play at a time; the handover happens on the overlay's first heartbeat and reverts if beacons stop for five seconds. Reload the overlay source.
 
 **Cover art missing** — songs without a WordPress featured image return `cover_url: ""` and the player falls back to a magenta/blue gradient placeholder. To add a cover, upload one at `sync.land/wp-admin/post.php?post=<song_id>&action=edit → Featured Image`.
 
@@ -162,12 +206,24 @@ If the streamer has upgraded to a **Commercial Sync** license for specific track
 
 ## Roadmap
 
-- **v0.1** — PAT auth, playlist load, per-track clearance, attribution overlay. **← current**
-- **v0.2** — OAuth2 / PKCE auth flow (replaces PAT for smoother connection).
-- **v0.3** — Real-time view-cap counter (dock warns when a track approaches SLFS-v1 view cap and offers upgrade).
-- **v0.4** — Multi-playlist queue and cross-playlist shuffle.
-- **v0.5** — Streamlabs OBS + XSplit compatibility layer (should just work — both accept the same browser URL, but tested).
-- **v1.0** — Public release, integration marketing.
+**Shipped**
+
+- **v0.1** — PAT auth, playlist load, per-track clearance, attribution overlay.
+- **v0.2** — **← current.** Audio moved onto a real OBS mixer channel via the overlay; persistent playback that survives navigation; licence verification made visible on screen with a copyable receipt; overlay lower third with five themes; settings screen; in-app OBS setup panel; fade in/out with talk-over duck.
+
+**Planned**
+
+- **v0.3** — OAuth2 / PKCE auth flow, replacing the PAT for smoother connection.
+- **v0.4** — Real-time view-cap counter: the dock warns as a track approaches the SLFS-v1 view cap and offers an upgrade.
+- **v0.5** — Multi-playlist queue and cross-playlist shuffle.
+- **v0.6** — Streamlabs OBS + XSplit compatibility pass. Both accept the same browser URL, so this is expected to work already; it is untested.
+- **v1.0** — Public release and integration marketing.
+
+### Known limits in v0.2.0
+
+- Overlay audio handover is verified by construction and in a browser, but **not yet end to end inside OBS with a live token**.
+- Loudness normalisation ships **off by default**, and is RMS rather than LUFS.
+- Stream URLs are unsigned object-storage links, and now travel to the overlay context as well as the dock.
 
 ## License
 
