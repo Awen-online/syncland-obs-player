@@ -34,13 +34,18 @@ The browser source is the overlay layer that shows the "Music: {artist} — via 
 
 - On your OBS scene: **Sources → + → Browser**
 - Fill in:
-  - **URL:** `https://sync.land/dock/?mode=overlay&token=YOUR_PAT`
-    - The `token` param is your PAT — the overlay needs it to fetch the current track's attribution string
-    - **Alternatively:** if you'd rather not put the PAT in the source URL, just add the browser source and paste the token once in the dock; the overlay will read from the same browser's localStorage
+  - **URL:** `https://sync.land/dock/?mode=overlay`
+    - No token, and don't add one. The dock drives the overlay over a `BroadcastChannel` on the shared `sync.land` origin, so the overlay never calls the API and has nothing to authenticate. OBS displays a source's URL in its properties dialog, so a PAT parked there is one screen-share away from being public.
   - **Width:** 1920 (or your canvas width)
   - **Height:** 300 (adjust to fit)
+  - **Uncheck "Refresh browser when scene becomes active"** — left on, the overlay forgets what's playing every time you cut to that scene
 - Click **OK**, then drag/resize the overlay layer to sit wherever you want the credit to appear
 - The overlay is transparent — only the attribution card shows on stream
+
+The overlay is also what puts your music on its own mixer channel. A Custom
+Browser Dock is OBS interface rather than a Source, so its audio goes to your
+system output and never reaches the mixer. Once the overlay is on the scene it
+takes over playback and the music gets a real fader you can duck under your mic.
 
 ## 4. Verify on stream
 
