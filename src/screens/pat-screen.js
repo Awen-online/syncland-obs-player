@@ -1,6 +1,10 @@
 import { saveToken, whoAmI, isStub } from '../api.js';
 
-export function renderPatScreen($app, { onSignIn }) {
+function escapeNotice(s) {
+  return String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+export function renderPatScreen($app, { onSignIn, notice } = {}) {
   $app.innerHTML = `
     <header class="sp-header">
       <img class="sp-logo" src="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" alt="Sync.Land" width="28" height="28">
@@ -8,6 +12,7 @@ export function renderPatScreen($app, { onSignIn }) {
     </header>
     <main class="sp-screen">
       <div>
+        ${notice ? `<div class="sp-status err" style="margin-bottom:16px;">${escapeNotice(notice)}</div>` : ''}
         <div class="sp-eyebrow">Sign in</div>
         <h1 class="sp-h1">Connect your Sync.Land account</h1>
         <p class="sp-lead">

@@ -50,7 +50,7 @@ export function loadLastPlaylist()    { return localStorage.getItem(PLAYLIST_KEY
 // -------------------------------------------------------------------------
 async function request(path, opts = {}) {
   const token = loadToken();
-  if (!token) throw new Error('No PAT - user needs to sign in first');
+  if (!token) { const err = new Error('No PAT - user needs to sign in first'); err.status = 401; err.isAuth = true; throw err; }
   const url = `${API_BASE}${path}`;
   const r = await fetch(url, {
     ...opts,
@@ -63,7 +63,13 @@ async function request(path, opts = {}) {
   });
   if (!r.ok) {
     const text = await r.text();
-    throw new Error(`API ${r.status}: ${text.slice(0, 300)}`);
+    // Carry the status. Without it a caller can do nothing but print the raw
+    // body, which is how a visitor with a dead token ended up reading
+    // {"code":"rest_forbidden",...} instead of being asked to sign in.
+    const err = new Error(`API ${r.status}: ${text.slice(0, 300)}`);
+    err.status = r.status;
+    err.isAuth = (r.status === 401 || r.status === 403);
+    throw err;
   }
   return r.json();
 }
@@ -106,7 +112,7 @@ export async function getTrackClearance(song_id) {
   }
 
   const token = loadToken();
-  if (!token) throw new Error('No PAT - user needs to sign in first');
+  if (!token) { const err = new Error('No PAT - user needs to sign in first'); err.status = 401; err.isAuth = true; throw err; }
   const r = await fetch(url, {
     headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` },
   });
@@ -119,7 +125,12 @@ export async function getTrackClearance(song_id) {
                        at: new Date().toISOString(), stub: false,
                        response: data !== null ? data : text.slice(0, 400) };
 
-  if (!r.ok) throw new Error(`API ${r.status}: ${text.slice(0, 300)}`);
+  if (!r.ok) {
+    const err = new Error(`API ${r.status}: ${text.slice(0, 300)}`);
+    err.status = r.status;
+    err.isAuth = (r.status === 401 || r.status === 403);
+    throw err;
+  }
   return data;
 }
 

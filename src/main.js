@@ -44,7 +44,7 @@ if (urlToken) {
 // Screen router — the "screens" object drives what renders next.
 // -------------------------------------------------------------------------
 const screens = {
-  auth:     () => renderPatScreen($app, { onSignIn: () => go('playlists') }),
+  auth:     (opts) => renderPatScreen($app, { onSignIn: () => go('playlists'), notice: opts && opts.notice }),
   playlists: () => renderPlaylistPicker($app, {
     onPick: (playlistId) => go('player', { playlistId }),
     onSignOut: () => go('auth'),
@@ -61,7 +61,7 @@ const screens = {
 let lastScreen = null;
 window.addEventListener('syncland:navigate', (e) => {
   const scr = e.detail && e.detail.screen;
-  if (scr && screens[scr]) go(scr);
+  if (scr && screens[scr]) go(scr, e.detail.opts || { notice: e.detail.notice });
 });
 
 function go(name, opts = {}) {

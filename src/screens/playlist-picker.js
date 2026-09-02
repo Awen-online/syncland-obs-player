@@ -67,8 +67,31 @@ async function loadAndRender($list, onPick) {
       });
     });
   } catch (e) {
-    $list.innerHTML = `<div class="sp-status err">Couldn't load playlists - ${escapeHtml(e.message)}</div>`;
+    // A token that is missing, revoked or expired is not an error to report,
+    // it is a sign-in prompt. Anything else is a real fault worth naming, but
+    // never by pasting a raw response body at someone.
+    if (e && e.isAuth) {
+      signOut();
+      window.dispatchEvent(new CustomEvent('syncland:navigate', {
+        detail: { screen: 'auth', notice: 'Your access token is no longer valid. Sign in again to load your playlists.' },
+      }));
+      return;
+    }
+    $list.innerHTML = `
+      <div class="sp-status err">Couldn&rsquo;t load your playlists. ${escapeHtml(friendly(e))}</div>
+      <div style="margin-top:10px;"><button class="sp-btn sp-btn-secondary" id="pp-retry">Try again</button></div>
+    `;
+    const $retry = $list.querySelector('#pp-retry');
+    if ($retry) $retry.addEventListener('click', () => loadAndRender($list, onPick));
   }
+}
+
+/** Plain-language cause, never the raw response body. */
+function friendly(e) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'This machine appears to be offline.';
+  if (e && e.status >= 500) return 'Sync.Land is not responding right now.';
+  if (e && e.status) return `The server returned ${e.status}.`;
+  return 'Check the connection and try again.';
 }
 
 function escapeHtml(s) {
