@@ -1,8 +1,7 @@
 import { settings, saveSettings, getVolume, setVolume,
-         currentNormGain, normalisationActive, remoteAudio } from '../playback.js';
+         currentNormGain, normalisationActive, remoteAudio, signOut } from '../playback.js';
 import { openSetupPanel } from '../setup-panel.js';
 import { isOBS, obsVersion, surface } from '../obs.js';
-import { clearToken } from '../api.js';
 import { THEMES, getTheme, applyTheme } from '../theme.js';
 
 /**
@@ -245,7 +244,7 @@ export function renderSettings($app, { onBack }) {
   $('#st-back').addEventListener('click', onBack);
   $('#st-obs').addEventListener('click', openSetupPanel);
   $('#st-out').addEventListener('click', () => {
-    clearToken();
+    signOut();
     window.location.reload();
   });
 

@@ -1,4 +1,5 @@
-import { listPlaylists, clearToken, saveLastPlaylist } from '../api.js';
+import { listPlaylists, saveLastPlaylist } from '../api.js';
+import { signOut } from '../playback.js';
 import { openSetupPanel } from '../setup-panel.js';
 
 export function renderPlaylistPicker($app, { onPick, onSignOut }) {
@@ -27,7 +28,7 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
 
   $app.querySelector('#obs-setup').addEventListener('click', openSetupPanel);
   $app.querySelector('#pp-signout').addEventListener('click', () => {
-    clearToken();
+    signOut();
     onSignOut();
   });
 

@@ -42,6 +42,7 @@ export function saveToken(pat) { localStorage.setItem(TOKEN_KEY, pat); }
 export function loadToken()   { return localStorage.getItem(TOKEN_KEY) || ''; }
 export function clearToken()   { localStorage.removeItem(TOKEN_KEY); }
 export function saveLastPlaylist(id) { localStorage.setItem(PLAYLIST_KEY, String(id)); }
+export function clearLastPlaylist()   { localStorage.removeItem(PLAYLIST_KEY); }
 export function loadLastPlaylist()    { return localStorage.getItem(PLAYLIST_KEY) || ''; }
 
 // -------------------------------------------------------------------------

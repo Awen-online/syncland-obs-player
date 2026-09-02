@@ -1,4 +1,4 @@
-import { listPlaylists, getTrackClearance, logPlay, isStub } from './api.js';
+import { listPlaylists, getTrackClearance, logPlay, isStub, clearToken, clearLastPlaylist } from './api.js';
 import { publishNowPlaying, sendAudio, onAudio } from './nowplaying.js';
 
 /**
@@ -517,6 +517,30 @@ export function stop() {
   state.verify = null;
   publishNowPlaying(null);
   emit();
+}
+
+/**
+ * Sign out, and actually leave nothing behind.
+ *
+ * Dropping the token was never enough. The queue stayed loaded, the last
+ * playlist was still in localStorage so the next sign-in silently restored
+ * someone else's selection, and — the one that matters on air — the overlay
+ * kept rendering the previous track's attribution, because nothing told it to
+ * stop. A signed-out dock was still publishing a licensed track's credit to
+ * the stream.
+ *
+ * stop() covers the playback side: it pauses, drops the src, clears the
+ * clearance and verification state, and publishes a null now-playing, which
+ * both clears the overlay's stored state and broadcasts the clear to any
+ * overlay window already open.
+ *
+ * Playback preferences (volume, per-song gain, normalisation, theme) are
+ * deliberately kept. They belong to this machine, not to the account.
+ */
+export function signOut() {
+  stop();
+  clearToken();
+  clearLastPlaylist();
 }
 
 export function fmtTime(s) {
