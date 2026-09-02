@@ -1,4 +1,4 @@
-import { listPlaylists, getTrackClearance, logPlay, isStub, clearToken, clearLastPlaylist } from './api.js';
+import { listPlaylists, getTrackClearance, logPlay, completePlay, isStub, clearToken, clearLastPlaylist } from './api.js';
 import { publishNowPlaying, sendAudio, onAudio } from './nowplaying.js';
 
 /**
@@ -272,7 +272,7 @@ audio.addEventListener('timeupdate', () => {
   state.duration = audio.duration || 0;
   emit();
 });
-audio.addEventListener('ended', () => step(+1));
+audio.addEventListener('ended', () => { endPlay('ended'); loggedKey = ''; step(+1); });
 
 // ?diag=1 surfaces the media element's real state. Guessing at this from a
 // one-line error message has cost three rounds already.
@@ -404,6 +404,7 @@ export async function loadCurrentTrack() {
     // plays twice, slightly out of phase.
     sendAudio({ type: 'load', url: state.clearance.stream_url || '',
                 volume: liveTarget(), play: state.playing });
+    if (state.playing) notePlay();
   } else {
     primeNormalisation(t.song_id);
     if (state.clearance.stream_url) {
@@ -422,8 +423,9 @@ export async function loadCurrentTrack() {
         await audio.play();
         if (settings.fade) { rampTo(liveTarget(), settings.fadeMs); }
         else { audio.volume = liveTarget(); }
+        notePlay();
       } catch (e) { state.playing = false; }
-    } else if (isStub()) { armStub(); }
+    } else if (isStub()) { armStub(); notePlay(); }
     publish(); emit();
   }
 }
@@ -431,6 +433,54 @@ export async function loadCurrentTrack() {
 function armStub() {
   clearTimeout(stubTimer);
   stubTimer = setTimeout(() => step(+1), 25000);
+}
+
+/**
+ * Record a play, once per track start.
+ *
+ * logPlay() used to be called only from togglePlay(), which is the button.
+ * Everything that starts a track WITHOUT the button - next, previous, and the
+ * 'ended' handler advancing the playlist - started audio and recorded nothing.
+ * A streamer running a playlist for three hours produced exactly one ledger
+ * row: the track they pressed play on.
+ *
+ * Keyed on the track, not on the event, so resuming after a pause does not
+ * book a second play of the same track. step() clears the key, so the next
+ * track always logs.
+ */
+let loggedKey = '';
+let openUsage = 0;          // ledger row for the track currently playing
+let openStart = 0;          // audio position when it started, for partial plays
+
+function notePlay() {
+  const t = currentTrack();
+  if (!t) return;
+  const key = state.index + ':' + t.song_id;
+  if (key === loggedKey) return;
+  loggedKey = key;
+  openStart = audio.currentTime || 0;
+  logPlay(t.song_id, 0)
+    .then((r) => { openUsage = (r && r.usage_id) || 0; })
+    .catch(() => { openUsage = 0; });
+}
+
+/**
+ * Close the open usage with what actually happened.
+ *
+ * Called wherever a track stops for any reason. Without this every row says
+ * only "a play started", which cannot distinguish a track someone listened to
+ * from one they skipped four seconds in - and on a sync platform that
+ * difference is most of the signal.
+ */
+function endPlay(reason) {
+  if (!openUsage) return;
+  const played = Math.max(0, (audio.currentTime || 0) - openStart);
+  completePlay(openUsage, {
+    seconds: played,
+    duration: audio.duration && isFinite(audio.duration) ? audio.duration : (currentTrack()?.duration || 0),
+    reason,
+  });
+  openUsage = 0;
 }
 
 export async function togglePlay() {
@@ -446,8 +496,7 @@ export async function togglePlay() {
   } else if (remoteAudio()) {
     sendAudio({ type: 'play' });
     state.playing = true;
-    const rt = currentTrack();
-    if (rt) logPlay(rt.song_id, 0).catch(() => {});
+    notePlay();
     publish(); emit();
     return;
   } else {
@@ -472,8 +521,7 @@ export async function togglePlay() {
       armStub();
     }
     state.playing = true;
-    const t = currentTrack();
-    if (t) logPlay(t.song_id, 0).catch(() => {});
+    notePlay();
   }
   publish();
   emit();
@@ -482,6 +530,8 @@ export async function togglePlay() {
 export function step(delta) {
   if (!state.tracks.length) return;
   clearTimeout(stubTimer);
+  endPlay('skipped');                  // whatever was playing did not finish
+  loggedKey = '';                      // a different track is a different play
   state.index = (state.index + delta + state.tracks.length) % state.tracks.length;
   emit();
   loadCurrentTrack();
@@ -506,6 +556,8 @@ export function getVolume() { return userVolume; }
 
 /** Full stop — used when signing out or leaving the playlist entirely. */
 export function stop() {
+  endPlay('stopped');
+  loggedKey = '';
   clearTimeout(stubTimer);
   cancelAnimationFrame(rampId);
   if (remoteAudio()) sendAudio({ type: 'stop' });

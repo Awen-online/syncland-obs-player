@@ -134,6 +134,28 @@ export async function getTrackClearance(song_id) {
   return data;
 }
 
+/**
+ * Close a usage out: how much of the track was actually heard, and why it
+ * stopped. Fire-and-forget, and uses sendBeacon when the page is going away
+ * so a closing dock still reports the ending it already knows.
+ */
+export async function completePlay(usage_id, { seconds = 0, duration = 0, reason = 'stopped' } = {}) {
+  if (!usage_id) return;
+  if (stubMode) { console.info('[stub] completePlay', { usage_id, seconds, duration, reason }); return; }
+  const url  = `${API_BASE}/streamer/usage/${usage_id}/complete`;
+  const body = JSON.stringify({ seconds: Math.round(seconds), duration: Math.round(duration), reason });
+  const token = loadToken();
+  if (!token) return;
+  try {
+    await fetch(url, {
+      method: 'POST',
+      keepalive: true,          // survives the tab or dock closing mid-flight
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body,
+    });
+  } catch (e) { /* never let bookkeeping break playback */ }
+}
+
 export async function logPlay(song_id, seconds) {
   if (stubMode) {
     console.info('[stub] logPlay', { song_id, seconds });
