@@ -1,4 +1,5 @@
 import { saveToken, whoAmI, isStub } from '../api.js';
+import { brandHeader } from '../obs.js';
 
 function escapeNotice(s) {
   return String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -7,8 +8,7 @@ function escapeNotice(s) {
 export function renderPatScreen($app, { onSignIn, notice } = {}) {
   $app.innerHTML = `
     <header class="sp-header">
-      <img class="sp-logo" src="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" alt="Sync.Land" width="28" height="28">
-      <div class="sp-brand">Sync.Land <small>OBS Player</small></div>
+      ${brandHeader()}
     </header>
     <main class="sp-screen">
       <div>

@@ -2,6 +2,7 @@ import { isStub, getLastVerification } from '../api.js';
 import { openSetupPanel } from '../setup-panel.js';
 import * as pb from '../playback.js';
 import { speakerIcon } from '../icons.js';
+import { brandHeader } from '../obs.js';
 
 /**
  * Player screen.
@@ -17,8 +18,7 @@ import { speakerIcon } from '../icons.js';
 export function renderPlayer($app, { playlistId, onBack }) {
   $app.innerHTML = `
     <header class="sp-header">
-      <img class="sp-logo" src="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" alt="Sync.Land" width="28" height="28">
-      <div class="sp-brand">Sync.Land <small>OBS Player</small></div>
+      ${brandHeader()}
       <div style="flex:1 1 auto;"></div>
       <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">Add to OBS</button>
       <button class="sp-btn sp-btn-secondary" id="pl-back" style="padding:6px 12px; font-size:12px;">← Playlists</button>

@@ -31,3 +31,22 @@ export function surface() {
   if (!isOBS()) return overlay ? 'browser-overlay' : 'browser';
   return overlay ? 'obs-source' : 'obs-dock';
 }
+
+/**
+ * The brand block in every screen header.
+ *
+ * In a browser it is a link home. The dock is a standalone app that never
+ * boots WordPress, so it has no site chrome and no way back: anyone who
+ * followed the Dock link in the main menu, or came from the launch post,
+ * landed somewhere they could only leave with the back button.
+ *
+ * In OBS it stays inert markup. There the dock IS the destination, and a
+ * link would navigate the panel away from the player with no way to return.
+ */
+export function brandHeader() {
+  const logo  = '<img class="sp-logo" src="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" alt="Sync.Land" width="28" height="28">';
+  const brand = '<div class="sp-brand">Sync.Land <small>OBS Player</small></div>';
+  return isOBS()
+    ? logo + brand
+    : `<a class="sp-home" href="https://www.sync.land/" title="Back to sync.land">${logo}${brand}</a>`;
+}
