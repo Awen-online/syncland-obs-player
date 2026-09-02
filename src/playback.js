@@ -60,6 +60,10 @@ onAudio((m) => {
         sendAudio({ type: 'load', url: state.clearance.stream_url,
                     volume: liveTarget(), play: state.playing });
       }
+      // The playhead is about to jump from wherever the dock had reached back
+      // to the start of the overlay's copy. That is a handover, not a rewind,
+      // so re-anchor instead of trying to reconcile the two clocks.
+      lastPos = null;
       emit();
     }
     return;
@@ -67,7 +71,14 @@ onAudio((m) => {
   if (m.type === 'state') {
     state.position = m.position || 0;
     state.duration = m.duration || 0;
-    if (m.kind === 'ended') { step(+1); return; }
+    // The overlay is the thing actually making sound, so its clock is the only
+    // honest answer to "how much was heard". The dock's own element is never
+    // even given a src in this mode.
+    notePosition(m.position, m.duration);
+    // Reached the end at the overlay, so it ended - it was not skipped. The
+    // local path already distinguishes these; this one used to fall through to
+    // step(), which books every completed track as 'skipped'.
+    if (m.kind === 'ended') { endPlay('ended'); loggedKey = ''; step(+1); return; }
     if (m.kind === 'error') {
       setStatus('err', `Playback failed - ${m.error || 'the overlay could not play that file'}.`);
       state.playing = false;
@@ -270,6 +281,9 @@ audio.addEventListener('timeupdate', () => {
   measureTick();
   state.position = audio.currentTime || 0;
   state.duration = audio.duration || 0;
+  // Only when this element is the one playing. With an overlay attached it
+  // holds no src and would feed the ledger a permanent zero.
+  if (!remoteAudio()) { notePosition(audio.currentTime, audio.duration); }
   emit();
 });
 audio.addEventListener('ended', () => { endPlay('ended'); loggedKey = ''; step(+1); });
@@ -297,6 +311,16 @@ export function diagnostics() {
     graphBuilt: !!actx, normalize: settings.normalize,
     error: audio.error ? { code: audio.error.code, message: audio.error.message } : null,
     clearanceUrl: (state.clearance && state.clearance.stream_url) || '(none)',
+    // What the ledger is about to be told, and which context it came from.
+    // "Why does this row say zero seconds" is otherwise unanswerable from
+    // outside, which is how every play was booked at zero for weeks.
+    usage: {
+      row:      openUsage,
+      remote:   remoteAudio(),
+      heard:    Math.round(heard * 10) / 10,
+      position: Math.round(livePosition() * 10) / 10,
+      duration: Math.round(liveDuration()),
+    },
   };
 }
 audio.addEventListener('error', () => {
@@ -450,18 +474,90 @@ function armStub() {
  */
 let loggedKey = '';
 let openUsage = 0;          // ledger row for the track currently playing
-let openStart = 0;          // audio position when it started, for partial plays
+let openGen   = 0;          // bumped on every track start; names the open row
+let closedGen = 0;          // generation whose ending has already been sent
+let heard     = 0;          // seconds of the open track actually heard
+let lastPos   = null;       // last playhead seen; null means re-anchor, credit nothing
+let openDur   = 0;          // best known length of the open track
+
+// gen -> ending recorded before /played had answered with the row id.
+const unresolved = new Map();
+
+/**
+ * Where the sound is actually coming from.
+ *
+ * When an overlay Browser Source is alive it owns the audio and the dock's own
+ * element is never given a src, so `audio.currentTime` sits at zero for the
+ * entire track. Reading it there is what recorded every play as zero seconds.
+ * Ask whichever context is really producing sound.
+ */
+function livePosition() {
+  return remoteAudio() ? (state.position || 0) : (audio.currentTime || 0);
+}
+function liveDuration() {
+  const d = remoteAudio() ? state.duration : audio.duration;
+  return (isFinite(d) && d > 0) ? d : openDur;
+}
+
+/**
+ * Accumulate listening time from playhead samples.
+ *
+ * Deliberately not `position - positionAtStart`. That is a difference between
+ * two coordinates, and it stops meaning "how much was heard" the moment anyone
+ * pauses or scrubs: a listener who drags to 3:00 and stops has heard nothing,
+ * but the subtraction reports three minutes. Summing sane forward steps counts
+ * what was played through, ignores a scrub in either direction, and cannot be
+ * inflated by jumping to the end.
+ *
+ * MAX_STEP is the largest gap treated as continuous playback. Both a media
+ * element and the overlay report roughly four times a second, so a gap past a
+ * few seconds is a seek, a stall or a throttled context - none of which anyone
+ * listened to. Under-counting a stall is the safe direction to be wrong in.
+ */
+const MAX_STEP = 5;
+function notePosition(pos, dur) {
+  try {
+    if (isFinite(dur) && dur > 0) { openDur = dur; }
+    if (!isFinite(pos)) { return; }
+    if (lastPos !== null && state.playing) {
+      const d = pos - lastPos;
+      if (d > 0 && d <= MAX_STEP) { heard += d; }
+    }
+    lastPos = pos;
+  } catch (e) { /* bookkeeping never breaks playback */ }
+}
 
 function notePlay() {
   const t = currentTrack();
   if (!t) return;
   const key = state.index + ':' + t.song_id;
-  if (key === loggedKey) return;
+  if (key === loggedKey) return;      // resuming after a pause is not a new play
   loggedKey = key;
-  openStart = audio.currentTime || 0;
+
+  const gen = ++openGen;
+  openUsage = 0;
+  heard     = 0;
+  lastPos   = null;                   // first sample only anchors, it credits nothing
+  openDur   = Number(t.duration) || 0;
+
   logPlay(t.song_id, 0)
-    .then((r) => { openUsage = (r && r.usage_id) || 0; })
-    .catch(() => { openUsage = 0; });
+    .then((r) => {
+      const id   = (r && r.usage_id) || 0;
+      const late = unresolved.get(gen);
+      if (late) {
+        // The track was already over before the server said which row it was.
+        // Close it now with the ending we recorded at the time; otherwise the
+        // row stays open at zero seconds for good.
+        unresolved.delete(gen);
+        if (id) { completePlay(id, late); }
+        return;
+      }
+      if (gen === openGen) { openUsage = id; }
+    })
+    .catch(() => {
+      unresolved.delete(gen);
+      if (gen === openGen) { openUsage = 0; }
+    });
 }
 
 /**
@@ -471,22 +567,45 @@ function notePlay() {
  * only "a play started", which cannot distinguish a track someone listened to
  * from one they skipped four seconds in - and on a sync platform that
  * difference is most of the signal.
+ *
+ * The first ending wins here as well as at the server, so the pair that fires
+ * on a natural end - the 'ended' listener, then step() - books one ending, not
+ * two. Keyed on the generation rather than on `openUsage` being set, because a
+ * fast skip can end a track while its row id is still in flight.
  */
 function endPlay(reason) {
-  if (!openUsage) return;
-  const played = Math.max(0, (audio.currentTime || 0) - openStart);
-  completePlay(openUsage, {
-    seconds: played,
-    duration: audio.duration && isFinite(audio.duration) ? audio.duration : (currentTrack()?.duration || 0),
-    reason,
-  });
-  openUsage = 0;
+  try {
+    const gen = openGen;
+    if (!gen || closedGen === gen) { return; }
+    closedGen = gen;
+
+    notePosition(livePosition(), liveDuration());   // one last sample
+
+    const ending = { seconds: heard, duration: liveDuration(), reason };
+    const id = openUsage;
+    openUsage = 0;
+    if (id) { completePlay(id, ending); }
+    else    { unresolved.set(gen, ending); }        // row id still in flight
+  } catch (e) { /* bookkeeping never breaks playback */ }
+}
+
+// A dock that goes away mid-track still knows how much was heard, and
+// completePlay posts with keepalive, so the beacon survives the window closing.
+// Without this the last track of every session stayed open at zero seconds.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => endPlay('stopped'));
 }
 
 export async function togglePlay() {
   if (!state.clearance || !state.clearance.can_stream) return;
   if (state.playing) {
     clearTimeout(stubTimer);
+    // Read the playhead before the transport flips, then re-anchor. The
+    // fade-out that follows keeps the playhead moving for another fadeMs
+    // (two seconds by default) and the paused stretch after it moves nothing;
+    // neither is time anyone chose to listen to.
+    notePosition(livePosition(), liveDuration());
+    lastPos = null;
     state.playing = false;
     emit();
     if (remoteAudio()) { sendAudio({ type: 'pause' }); publish(); return; }
@@ -496,6 +615,11 @@ export async function togglePlay() {
   } else if (remoteAudio()) {
     sendAudio({ type: 'play' });
     state.playing = true;
+    // Anchor on the playhead as it stands right now. On a resume this is
+    // exact, so nothing is lost waiting for the first sample to arrive; on a
+    // fresh track notePlay() clears it a line later, which is what we want
+    // because a stale reading there would credit the previous track's tail.
+    lastPos = livePosition();
     notePlay();
     publish(); emit();
     return;
@@ -521,6 +645,7 @@ export async function togglePlay() {
       armStub();
     }
     state.playing = true;
+    lastPos = livePosition();     // exact on a resume; notePlay() clears it on a new track
     notePlay();
   }
   publish();
@@ -540,8 +665,21 @@ export function step(delta) {
 export function seek(seconds) {
   const d = state.duration || audio.duration || 0;
   const v = Math.max(0, Math.min(seconds, d || seconds));
-  if (remoteAudio()) { sendAudio({ type: 'seek', value: v }); state.position = v; emit(); return; }
-  if (audio.duration) { audio.currentTime = v; }
+  // Scrubbing is not listening, so the jump itself must never be counted as
+  // heard - in either direction.
+  if (remoteAudio()) {
+    sendAudio({ type: 'seek', value: v });
+    state.position = v;
+    // The overlay's next report may still be pre-seek, so re-anchor on it
+    // rather than trusting v. A stale reading gives a negative or oversized
+    // step, which notePosition drops anyway.
+    lastPos = null;
+    emit();
+    return;
+  }
+  // Local: the playhead is moved right here, so anchoring on v is exact and
+  // costs nothing - the first sample after the seek is credited normally.
+  if (audio.duration) { audio.currentTime = v; lastPos = v; }
 }
 
 export function setVolume(v) {
