@@ -520,6 +520,39 @@ body.has-player-bar { padding-bottom: 84px; }
   color: var(--sp-text-muted); font-size: 20px; line-height: 1; padding: 0 4px;
 }
 
+/* Browser state: this one asks for an action, so it gets the weight of one.
+   Deliberately louder than the OBS confirmation above, which only reports. */
+.sp-surface--cta {
+  align-items: flex-start;
+  gap: 16px;
+  padding: 15px 16px;
+  background: linear-gradient(180deg, rgba(240,145,77,.16) 0%, rgba(240,145,77,.09) 100%);
+  border-bottom: 1px solid rgba(240,145,77,.42);
+}
+.sp-surface--cta .sp-surface-body {
+  /* Shrink to the copy's own measure rather than filling the bar. On a wide
+     browser window a grown body left the button stranded at the far edge,
+     visually detached from the sentence asking for the click. */
+  flex: 0 1 auto; min-width: 0;
+}
+.sp-surface--cta .sp-surface-head {
+  display: flex; align-items: center; gap: 9px; margin-bottom: 4px;
+}
+.sp-surface--cta .sp-surface-head b { font-size: 14px; letter-spacing: -.01em; }
+.sp-surface--cta .sp-surface-copy {
+  margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--sp-text-soft); max-width: 62ch;
+}
+.sp-surface--cta .sp-surface-actions { flex: 0 0 auto; align-self: center; }
+.sp-surface--cta .sp-surface-x { align-self: flex-start; margin-left: auto; }
+.sp-btn.sp-surface-cta {
+  white-space: nowrap; padding: 9px 16px; font-size: 13px; font-weight: 700;
+}
+@media (max-width: 560px) {
+  .sp-surface--cta { flex-wrap: wrap; }
+  .sp-surface--cta .sp-surface-actions { width: 100%; }
+  .sp-btn.sp-surface-cta { width: 100%; }
+}
+
 /* ── Duck / fade / fader ─────────────────────────────────────────── */
 .sp-chip {
   padding: 5px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap;

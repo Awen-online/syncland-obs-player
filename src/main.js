@@ -99,15 +99,30 @@ function mountSurfaceBanner() {
   if (localStorage.getItem('syncland_surface_banner_dismissed') === '1') return;
   const inObs = isOBS();
   const el = document.createElement('div');
-  el.className = 'sp-surface' + (inObs ? ' ok' : '');
+  // Two different jobs. Inside OBS this is a quiet confirmation, so it stays a
+  // thin bar. In a browser the reader has something to DO before the thing
+  // works at all, and an underlined text link was not carrying that: it read
+  // as a footnote next to the sentence explaining the limitation.
+  el.className = inObs ? 'sp-surface ok' : 'sp-surface sp-surface--cta';
   el.innerHTML = inObs
     ? `<span class="sp-surface-dot"></span><b>Running inside OBS.</b>
        <span>This panel is your private control room and is never captured.</span>
        <button class="sp-surface-link" id="sfc-help">Overlay setup</button>
        <button class="sp-surface-x" id="sfc-x" aria-label="Dismiss">&times;</button>`
-    : `<span class="sp-surface-dot"></span><b>You are in a web browser.</b>
-       <span>Fine for browsing, but playback and the on-stream overlay only work once this is added to OBS.</span>
-       <button class="sp-surface-link" id="sfc-help">Show me how</button>
+    : `<div class="sp-surface-body">
+         <div class="sp-surface-head">
+           <span class="sp-surface-dot"></span>
+           <b>Add the dock to OBS to play music on stream</b>
+         </div>
+         <p class="sp-surface-copy">
+           You are in a web browser, which is fine for browsing your catalogue.
+           Playback and the on-stream attribution overlay only work once this is
+           added to OBS Studio. It takes about a minute.
+         </p>
+       </div>
+       <div class="sp-surface-actions">
+         <button class="sp-btn sp-surface-cta" id="sfc-help">Show me how &rarr;</button>
+       </div>
        <button class="sp-surface-x" id="sfc-x" aria-label="Dismiss">&times;</button>`;
   document.body.prepend(el);
   el.querySelector('#sfc-help').addEventListener('click', openSetupPanel);
