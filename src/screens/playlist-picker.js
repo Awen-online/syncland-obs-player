@@ -1,4 +1,4 @@
-import { listPlaylists, saveLastPlaylist } from '../api.js';
+import { listPlaylists, saveLastPlaylist, isDemo } from '../api.js';
 import { signOut } from '../playback.js';
 import { openSetupPanel } from '../setup-panel.js';
 import { brandHeader } from '../obs.js';
@@ -9,13 +9,15 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
       ${brandHeader()}
       <div style="flex:1 1 auto;"></div>
       <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">Add to OBS</button>
-      <button class="sp-btn sp-btn-secondary" id="pp-signout" style="padding: 6px 12px; font-size: 12px;">Sign out</button>
+      <button class="sp-btn sp-btn-secondary" id="pp-signout" style="padding: 6px 12px; font-size: 12px;">${isDemo() ? 'Sign in' : 'Sign out'}</button>
     </header>
     <main class="sp-screen">
       <div>
-        <div class="sp-eyebrow">Choose a playlist</div>
-        <h1 class="sp-h1">Your playlists</h1>
-        <p class="sp-lead">Pick one to load into the player. Every track will be license-checked before it plays.</p>
+        <div class="sp-eyebrow">${isDemo() ? 'Demo mode' : 'Choose a playlist'}</div>
+        <h1 class="sp-h1">${isDemo() ? 'Try it now' : 'Your playlists'}</h1>
+        <p class="sp-lead">${isDemo()
+          ? 'This is a sample playlist you can play straight away, no account needed. Every track is license-checked before it plays and credits its artist on screen. Sign in to use your own playlists.'
+          : 'Pick one to load into the player. Every track will be license-checked before it plays.'}</p>
       </div>
 
       <div id="pp-list"><div class="sp-status info">Loading…</div></div>
@@ -27,7 +29,9 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
   `;
 
   $app.querySelector('#obs-setup').addEventListener('click', openSetupPanel);
+  // In demo mode the same button is the way IN, not out.
   $app.querySelector('#pp-signout').addEventListener('click', () => {
+    if (isDemo()) { onSignOut(); return; }
     signOut();
     onSignOut();
   });

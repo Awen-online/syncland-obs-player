@@ -81,13 +81,13 @@ if (OVERLAY_MODE) { applyThemeFromUrl(); } else { applyTheme(getTheme()); }
 
 if (OVERLAY_MODE) {
   go('overlay');
-} else if (loadToken()) {
+} else {
+  // No token is no longer a wall. Without one the dock loads the public demo
+  // playlist, so a stranger who pasted this URL into OBS hears music instead of
+  // a sign-in screen. The PAT screen stays reachable from the header button.
   mountPlayerBar();
   mountSurfaceBanner();
   go('playlists');
-} else {
-  mountSurfaceBanner();
-  go('auth');
 }
 
 /**

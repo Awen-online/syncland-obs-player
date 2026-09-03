@@ -16,11 +16,26 @@
 // deployed bundle, and the dock could never reach prod. Gating on
 // import.meta.env.DEV makes that class of mistake impossible rather than
 // relying on remembering to move a file before building.
-const PROD_API = 'https://sync.land/wp-json/FML/v1';
-const API_BASE =
-  (import.meta.env && import.meta.env.DEV && import.meta.env.VITE_SYNCLAND_API)
-    ? import.meta.env.VITE_SYNCLAND_API
-    : PROD_API;
+const PROD_API = 'https://www.sync.land/wp-json/FML/v1';
+
+// Prefer the origin the dock was actually served from. sync.land and
+// www.sync.land BOTH return 200 for /dock/ with no canonical redirect, and the
+// PAT is stored per origin, so a hardcoded host meant a streamer could set up on
+// one and come back on the other to an empty dock and an apparently dead token,
+// with nothing on screen to explain why. Same-origin also drops a needless CORS
+// round trip.
+function resolveApiBase() {
+  if (import.meta.env && import.meta.env.DEV && import.meta.env.VITE_SYNCLAND_API) {
+    return import.meta.env.VITE_SYNCLAND_API;
+  }
+  try {
+    if (typeof location !== 'undefined' && /(^|[.])sync[.]land$/.test(location.hostname)) {
+      return location.origin + '/wp-json/FML/v1';
+    }
+  } catch (e) { /* fall through to the pinned host */ }
+  return PROD_API;
+}
+const API_BASE = resolveApiBase();
 
 // Stubs default off — the backend is live. Set `?stub=1` in the URL, or
 // VITE_STUB_MODE=1 in .env.local, to force stubs during dev without a token.
@@ -44,6 +59,29 @@ export function clearToken()   { localStorage.removeItem(TOKEN_KEY); }
 export function saveLastPlaylist(id) { localStorage.setItem(PLAYLIST_KEY, String(id)); }
 export function clearLastPlaylist()   { localStorage.removeItem(PLAYLIST_KEY); }
 export function loadLastPlaylist()    { return localStorage.getItem(PLAYLIST_KEY) || ''; }
+
+// -------------------------------------------------------------------------
+// Demo mode
+//
+// Without a token the dock used to throw 401 and show a sign-in wall, so a
+// stranger who pasted the URL into OBS heard nothing at all. Demo mode serves a
+// small curated, consent-gated playlist from public endpoints instead, so step
+// one becomes "paste a URL and hear music" and signing up is the upgrade.
+//
+// Demo plays are deliberately not logged: the usage ledger is keyed to a user
+// and records a licence-relevant play, and anonymous demo playback is neither.
+// -------------------------------------------------------------------------
+export function isDemo() { return !stubMode && !loadToken(); }
+
+async function publicRequest(path) {
+  const r = await fetch(API_BASE + path, { headers: { 'Accept': 'application/json' } });
+  if (!r.ok) {
+    const err = new Error('API ' + r.status + ': ' + (await r.text()).slice(0, 300));
+    err.status = r.status;
+    throw err;
+  }
+  return r.json();
+}
 
 // -------------------------------------------------------------------------
 // Low-level fetch wrapper
@@ -80,11 +118,13 @@ async function request(path, opts = {}) {
 
 export async function whoAmI() {
   if (stubMode) return { user_id: 8617, display_name: 'Creepzz (stub)', artist_ids: [11732] };
+  if (isDemo()) return { user_id: 0, display_name: 'Demo', artist_ids: [], demo: true };
   return request('/streamer/me');
 }
 
 export async function listPlaylists() {
   if (stubMode) return stubPlaylists();
+  if (isDemo()) return publicRequest('/streamer/demo/playlists');
   return request('/streamer/playlists');
 }
 
@@ -108,6 +148,15 @@ export async function getTrackClearance(song_id) {
     const data = await stubClearance(song_id);
     lastVerification = { method: 'GET', url, status: 200, ms: 0,
                          at: new Date().toISOString(), stub: true, response: data };
+    return data;
+  }
+
+  if (isDemo()) {
+    const demoPath = '/streamer/demo/track/' + song_id + '/clearance';
+    const data = await publicRequest(demoPath);
+    lastVerification = { method: 'GET', url: API_BASE + demoPath, status: 200,
+                         ms: Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0),
+                         at: new Date().toISOString(), demo: true, response: data };
     return data;
   }
 
@@ -157,6 +206,7 @@ export async function completePlay(usage_id, { seconds = 0, duration = 0, reason
 }
 
 export async function logPlay(song_id, seconds) {
+  if (isDemo()) return { ok: true, demo: true };   // see the note above: not ledgered
   if (stubMode) {
     console.info('[stub] logPlay', { song_id, seconds });
     return { ok: true };
