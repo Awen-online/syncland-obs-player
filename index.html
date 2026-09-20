@@ -3,12 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sync.Land OBS Player</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%23E237B2'/><text x='16' y='22' font-size='20' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>♪</text></svg>" />
+    <title>The Dock: licensed music for your live stream, inside OBS</title>
+    <meta name="description" content="Sync.Land's OBS player. Paste one URL into a browser dock and play cleared, artist-licensed music on stream with a now-playing overlay. Free to try, no account needed for the demo playlist, open source." />
+    <link rel="canonical" href="https://www.sync.land/dock/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#0B0B14" />
+    <link rel="icon" href="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-32x32.png" sizes="32x32" />
+    <link rel="icon" href="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-180x180.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Sync.Land" />
+    <meta property="og:url" content="https://www.sync.land/dock/" />
+    <meta property="og:title" content="The Dock: licensed music for your live stream, inside OBS" />
+    <meta property="og:description" content="Sync.Land's OBS player. Paste one URL into a browser dock and play cleared, artist-licensed music on stream with a now-playing overlay. Free to try, no account needed for the demo playlist, open source." />
+    <meta property="og:image" content="https://www.sync.land/dock/dock-card-1200x630.jpg" />
+    <meta property="og:image:secure_url" content="https://www.sync.land/dock/dock-card-1200x630.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sync.Land, The Dock: licensed music for your live stream, inside OBS" />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The Dock: licensed music for your live stream, inside OBS" />
+    <meta name="twitter:description" content="Sync.Land's OBS player. Paste one URL into a browser dock and play cleared, artist-licensed music on stream with a now-playing overlay. Free to try, no account needed for the demo playlist, open source." />
+    <meta name="twitter:image" content="https://www.sync.land/dock/dock-card-1200x630.jpg" />
+    <meta name="twitter:image:alt" content="Sync.Land, The Dock: licensed music for your live stream, inside OBS" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Sync.Land Dock",
+      "alternateName": "Sync.Land OBS Player",
+      "url": "https://www.sync.land/dock/",
+      "image": "https://www.sync.land/dock/dock-card-1200x630.jpg",
+      "description": "Sync.Land's OBS player. Paste one URL into a browser dock and play cleared, artist-licensed music on stream with a now-playing overlay. Free to try, no account needed for the demo playlist, open source.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "OBS Studio (browser dock), any desktop browser",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "codeRepository": "https://github.com/Awen-online/syncland-obs-player",
+      "publisher": { "@type": "Organization", "name": "Sync.Land", "url": "https://www.sync.land/", "logo": "https://www.sync.land/wp-content/uploads/2024/06/cropped-SyncLand-Logo-optimized-192x192.png" },
+      "featureList": [
+        "Plays artist-licensed tracks from Sync.Land inside an OBS browser dock",
+        "Now-playing overlay with artist attribution for the stream",
+        "Demo playlist that needs no account",
+        "Personal playlists and per-track clearance for signed-in users"
+      ]
+    }
+    </script>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
     <div id="app"></div>
+    <noscript>
+      <h1>The Dock: licensed music for your live stream, inside OBS</h1>
+      <p>Sync.Land's OBS player. Paste one URL into a browser dock and play cleared, artist-licensed music on stream with a now-playing overlay. Free to try, no account needed for the demo playlist. <a href="https://www.sync.land/">Sync.Land</a> is a music licensing marketplace for independent artists.</p>
+    </noscript>
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
