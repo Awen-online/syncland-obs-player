@@ -48,19 +48,35 @@ export function openSetupPanel() {
       </div>
       <div class="sp-setup-body">
 
+        <p class="sp-note sp-note-first">Two pieces, added in two different places.
+           The <b>dock</b> is your control panel: only you see it, in the OBS window.
+           The <b>overlay</b> is the credit your viewers see on stream.</p>
+
         <div class="sp-step">
           <div class="sp-step-n">1</div>
           <div class="sp-step-c">
-            <h3>The player, as a dock</h3>
-            <p>In OBS: <b>Docks &rarr; Custom Browser Docks</b>. Give it a name, paste the URL, press Apply.</p>
-            ${row('Dock URL', DOCK_URL)}
+            <h3>Copy your dock URL</h3>
+            <p>Make a key at <a href="https://sync.land/account/tokens/" target="_blank">sync.land/account/tokens/</a>.
+               The page gives you a dock URL with your key built in, so adding the dock also connects your playlists.</p>
           </div>
         </div>
 
         <div class="sp-step">
           <div class="sp-step-n">2</div>
           <div class="sp-step-c">
-            <h3>The attribution overlay, as a source</h3>
+            <h3>Add it as a Dock, not a Source</h3>
+            <p>In OBS: <b>Docks &rarr; Custom Browser Docks</b>. Name it Sync.Land, paste your dock URL, press <b>Apply</b>.
+               The panel appears in the OBS window and your playlists load.</p>
+            <p class="sp-note">Not under Sources. Added as a Source, the player shows on your stream and you can&rsquo;t click it.
+               No key yet? Use the plain URL below and paste your key into the dock itself.</p>
+            ${row('Plain dock URL', DOCK_URL)}
+          </div>
+        </div>
+
+        <div class="sp-step">
+          <div class="sp-step-n">3</div>
+          <div class="sp-step-c">
+            <h3>Add the overlay as a Source</h3>
             <p>In OBS: <b>Sources &rarr; + &rarr; Browser</b>. Paste the URL and set the size to match your canvas,
                usually <b>1920 &times; 1080</b>.</p>
             ${row('Overlay URL', OVERLAY_URL)}
@@ -71,9 +87,9 @@ export function openSetupPanel() {
         </div>
 
         <div class="sp-step">
-          <div class="sp-step-n">3</div>
+          <div class="sp-step-n">4</div>
           <div class="sp-step-c">
-            <h3>Press play</h3>
+            <h3>Press play in the dock</h3>
             <p>The overlay fades in with the track, its licence, and the attribution line required by that licence.
                It hides when you pause.</p>
           </div>
@@ -88,8 +104,9 @@ export function openSetupPanel() {
           </div>
         </details>
 
-        <p class="sp-note sp-note-last">Both must run in the <b>same OBS instance</b> &mdash; the dock tells the
-           overlay what is playing through the browser they share. A browser window outside OBS will not drive it.</p>
+        <p class="sp-note sp-note-last">Both must run in the <b>same OBS</b>: the dock tells the
+           overlay what is playing through the browser they share. A browser tab outside OBS will not drive it,
+           and a key entered in a browser tab does not reach OBS.</p>
       </div>
     </div>`;
 

@@ -40,6 +40,19 @@ if (urlToken) {
   history.replaceState({}, '', location.pathname + (OVERLAY_MODE ? '?mode=overlay' : ''));
 }
 
+// The personal dock URL from sync.land/account/tokens/ carries the key after
+// the #, which browsers never send to the server, so it stays out of access
+// logs. It exists because OBS keeps its own browser storage: a key pasted into
+// the dock in Chrome never reaches the dock inside OBS, and the first outside
+// streamer sat in demo mode on stream day because of exactly that. With the key
+// in the URL, adding the dock IS connecting it. OBS keeps the URL it was given,
+// so the key is re-read on every load; we only tidy the visible address.
+const hashKey = new URLSearchParams(location.hash.replace(/^#/, '')).get('key');
+if (hashKey && /^sk_syncland_[A-Za-z0-9_-]{8,}$/.test(hashKey)) {
+  localStorage.setItem('syncland_obs_player_pat', hashKey);
+  history.replaceState({}, '', location.pathname + location.search);
+}
+
 // -------------------------------------------------------------------------
 // Screen router — the "screens" object drives what renders next.
 // -------------------------------------------------------------------------
@@ -88,6 +101,46 @@ if (OVERLAY_MODE) {
   mountPlayerBar();
   mountSurfaceBanner();
   go('playlists');
+  watchForSourceMisuse();
+}
+
+/**
+ * The player page added as a Browser Source instead of a Dock. It then shows
+ * on stream, can't be clicked, and the streamer has no controls. OBS gives no
+ * flag for "dock" vs "source", but only sources receive the source visibility
+ * events, and a source renders at a canvas size no one drags a dock to.
+ */
+function watchForSourceMisuse() {
+  if (!isOBS()) return;
+  if (localStorage.getItem('syncland_is_dock') === '1') return;
+  const canvas = [[1920, 1080], [1280, 720], [2560, 1440], [3840, 2160], [800, 600]];
+  const w = window.innerWidth, h = window.innerHeight;
+  let shown = false;
+  const show = () => { if (!shown) { shown = true; mountWrongPlace(); } };
+  if (canvas.some(([cw, ch]) => cw === w && ch === h)) show();
+  window.addEventListener('obsSourceVisibleChanged', show);
+  window.addEventListener('obsSourceActiveChanged', show);
+}
+
+function mountWrongPlace() {
+  const el = document.createElement('div');
+  el.className = 'sp-wrong';
+  el.innerHTML = `
+    <div class="sp-wrong-card">
+      <div class="sp-eyebrow">This is in the wrong place</div>
+      <h1 class="sp-h1">The player is a Dock, not a Source</h1>
+      <p class="sp-lead">This page has been added as a Browser Source, so it shows on your stream and you can&rsquo;t reach its controls. Two changes fix it:</p>
+      <ol class="sp-wrong-steps">
+        <li><b>Remove this source</b>, then in OBS open <b>Docks &rarr; Custom Browser Docks</b> and paste your dock URL there. Get it from <b>sync.land/account/tokens/</b>; it connects your playlists in the same step.</li>
+        <li>For the credit your viewers see, add a <b>Browser Source</b> with <code>https://sync.land/dock/?mode=overlay</code> at 1920 &times; 1080.</li>
+      </ol>
+      <button class="sp-btn sp-btn-secondary" id="sp-wrong-x" type="button">This is a dock, hide this</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#sp-wrong-x').addEventListener('click', () => {
+    localStorage.setItem('syncland_is_dock', '1');
+    el.remove();
+  });
 }
 
 /**

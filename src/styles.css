@@ -853,3 +853,24 @@ body.has-player-bar { padding-bottom: 84px; }
 }
 .sp-home:hover, .sp-home:focus-visible { background: rgba(255,255,255,.06); }
 .sp-home:focus-visible { outline: 2px solid var(--sp-pink); outline-offset: 2px; }
+
+/* Demo mode: not connected, and the fix right here. */
+.sp-connect { border-color: rgba(240,145,77,.45); background: rgba(240,145,77,.08); margin-bottom: 14px; }
+.sp-connect-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.sp-connect-dot { width: 8px; height: 8px; border-radius: 50%; background: #F0914D; flex: none; }
+.sp-connect-copy { margin: 8px 0 12px; font-size: 13px; line-height: 1.55; color: var(--sp-text-soft); }
+.sp-connect-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.sp-connect-row input { flex: 1 1 180px; min-width: 0; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; color: var(--sp-text); padding: 10px 12px; font: inherit; }
+.sp-connect-row input:focus { outline: none; border-color: var(--sp-pink); }
+#pp-key-status .sp-status { margin-top: 10px; }
+.sp-connect-foot { margin: 10px 0 0; font-size: 12px; color: var(--sp-text-muted); }
+.sp-note-first { margin: 0 0 20px; }
+
+/* The player page added as a Browser Source: say so over everything. */
+.sp-wrong { position: fixed; inset: 0; z-index: 9999; background: rgba(10,8,20,.94); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.sp-wrong-card { max-width: 640px; background: var(--sp-card, #1f1f33); border: 2px solid #F0914D; border-radius: 16px; padding: 28px; }
+.sp-wrong-steps { margin: 0 0 20px; padding-left: 20px; line-height: 1.6; color: var(--sp-text-soft); }
+.sp-wrong-steps li { margin-bottom: 10px; }
+.sp-wrong code { background: rgba(0,0,0,.35); padding: 2px 6px; border-radius: 4px; font-size: .9em; word-break: break-all; }
+
+.sp-setup a, .sp-connect a { color: var(--sp-pink); font-weight: 600; }

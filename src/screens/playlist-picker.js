@@ -1,7 +1,7 @@
-import { listPlaylists, saveLastPlaylist, isDemo } from '../api.js';
+import { listPlaylists, saveLastPlaylist, isDemo, saveToken, clearToken, whoAmI } from '../api.js';
 import { signOut } from '../playback.js';
 import { openSetupPanel } from '../setup-panel.js';
-import { brandHeader } from '../obs.js';
+import { brandHeader, isOBS } from '../obs.js';
 
 export function renderPlaylistPicker($app, { onPick, onSignOut }) {
   $app.innerHTML = `
@@ -20,6 +20,7 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
           : 'Pick one to load into the player. Every track will be license-checked before it plays.'}</p>
       </div>
 
+      ${isDemo() ? connectCard() : ''}
       <div id="pp-list"><div class="sp-status info">Loading…</div></div>
     </main>
     <footer class="sp-footer">
@@ -36,7 +37,53 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
     onSignOut();
   });
 
+  if (isDemo()) wireConnect($app, () => renderPlaylistPicker($app, { onPick, onSignOut }));
   loadAndRender($app.querySelector('#pp-list'), onPick);
+}
+
+/**
+ * Demo mode, said plainly, with the way out right here. Inside OBS this is the
+ * only place a key can go: OBS keeps its own browser storage, so connecting in
+ * a normal browser tab does nothing for this panel.
+ */
+function connectCard() {
+  const where = isOBS()
+    ? 'Paste your key here to load your own playlists. A key entered in your web browser does not reach OBS; OBS keeps its own storage, so it has to go in this panel.'
+    : 'You are in a web browser. To play on stream, add the dock to OBS with your personal dock URL from sync.land/account/tokens/. It connects in the same step.';
+  return `
+    <div class="sp-card sp-connect">
+      <div class="sp-connect-head"><span class="sp-connect-dot"></span><b>Not connected: playing the demo playlist</b></div>
+      <p class="sp-connect-copy">${where}</p>
+      <div class="sp-connect-row">
+        <input type="password" id="pp-key" autocomplete="off" placeholder="sk_syncland_..." aria-label="Your Sync.Land key">
+        <button class="sp-btn" id="pp-key-go" type="button">Connect</button>
+      </div>
+      <div id="pp-key-status"></div>
+      <p class="sp-connect-foot">No key yet? Make one at <a href="https://sync.land/account/tokens/" target="_blank">sync.land/account/tokens/</a>.</p>
+    </div>`;
+}
+
+function wireConnect($app, onDone) {
+  const $in = $app.querySelector('#pp-key'), $go = $app.querySelector('#pp-key-go'), $st = $app.querySelector('#pp-key-status');
+  if (!$in || !$go) return;
+  const go = async () => {
+    const pat = $in.value.trim();
+    if (!pat) { $st.innerHTML = '<div class="sp-status err">Paste your key first.</div>'; return; }
+    $go.disabled = true;
+    $st.innerHTML = '<div class="sp-status info">Checking&hellip;</div>';
+    saveToken(pat);
+    try {
+      const me = await whoAmI();
+      $st.innerHTML = `<div class="sp-status ok">Connected as ${escapeHtml(me.display_name)}.</div>`;
+      setTimeout(onDone, 500);
+    } catch (e) {
+      clearToken();
+      $go.disabled = false;
+      $st.innerHTML = '<div class="sp-status err">That key did not work. Check it was copied whole, or make a new one.</div>';
+    }
+  };
+  $go.addEventListener('click', go);
+  $in.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
 }
 
 async function loadAndRender($list, onPick) {
