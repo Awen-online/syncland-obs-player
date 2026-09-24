@@ -1,5 +1,6 @@
 import { saveToken, whoAmI, isStub } from '../api.js';
 import { brandHeader } from '../obs.js';
+import { extractKey } from './playlist-picker.js';
 
 function escapeNotice(s) {
   return String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -13,20 +14,20 @@ export function renderPatScreen($app, { onSignIn, notice } = {}) {
     <main class="sp-screen">
       <div>
         ${notice ? `<div class="sp-status err" style="margin-bottom:16px;">${escapeNotice(notice)}</div>` : ''}
-        <div class="sp-eyebrow">Sign in</div>
+        <div class="sp-eyebrow">Connect</div>
         <h1 class="sp-h1">Connect your Sync.Land account</h1>
         <p class="sp-lead">
-          Paste a Personal Access Token to connect. You can generate one at
-          <a href="https://sync.land/account/tokens/" target="_blank">sync.land/account/tokens/</a>.
-          Tokens grant read-only access to your playlists and per-track license clearance.
+          Paste your player link from
+          <a href="https://sync.land/stream/" target="_blank">sync.land/stream</a>.
+          It lets this player read your playlists. It cannot buy anything or change your account.
         </p>
       </div>
 
       <div class="sp-card">
         <div class="sp-field">
-          <label for="pat-input">Personal Access Token</label>
-          <input type="password" id="pat-input" autocomplete="off"
-                 placeholder="sk_syncland_..." />
+          <label for="pat-input">Your player link</label>
+          <input type="text" id="pat-input" autocomplete="off" spellcheck="false"
+                 placeholder="Paste your player link" />
         </div>
         <div id="pat-status" style="margin: 10px 0 0;"></div>
         <div style="display:flex; gap:10px; margin-top: 14px;">
@@ -36,9 +37,7 @@ export function renderPatScreen($app, { onSignIn, notice } = {}) {
       </div>
 
       <div style="color: var(--sp-text-muted); font-size: 12px; line-height: 1.6;">
-        <strong style="color: var(--sp-text-soft);">Privacy:</strong> your PAT is stored only in this browser's local storage,
-        scoped to this dock. Nothing is synced to Sync.Land or third parties.
-        Revoke a token any time on the account page.
+        <strong style="color: var(--sp-text-soft);">Private:</strong> your link is kept only in this player. Turn it off any time at sync.land/stream.
       </div>
     </main>
     <footer class="sp-footer">
@@ -54,9 +53,9 @@ export function renderPatScreen($app, { onSignIn, notice } = {}) {
   $input.focus();
 
   $connect.addEventListener('click', async () => {
-    const pat = $input.value.trim();
+    const pat = extractKey($input.value);
     if (!pat) {
-      renderStatus($status, 'err', 'Paste a token first.');
+      renderStatus($status, 'err', 'Paste your player link first.');
       return;
     }
     $connect.disabled = true;
@@ -68,7 +67,7 @@ export function renderPatScreen($app, { onSignIn, notice } = {}) {
       setTimeout(() => onSignIn(), 500);
     } catch (e) {
       $connect.disabled = false;
-      renderStatus($status, 'err', `That token didn't work - ${e.message}`);
+      renderStatus($status, 'err', 'That link did not work. Copy it again from sync.land/stream, or make a new one there.');
     }
   });
 

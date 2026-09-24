@@ -2,7 +2,7 @@ import { isStub, getLastVerification } from '../api.js';
 import { openSetupPanel } from '../setup-panel.js';
 import * as pb from '../playback.js';
 import { speakerIcon } from '../icons.js';
-import { brandHeader } from '../obs.js';
+import { brandHeader, isOBS } from '../obs.js';
 
 /**
  * Player screen.
@@ -20,7 +20,7 @@ export function renderPlayer($app, { playlistId, onBack }) {
     <header class="sp-header">
       ${brandHeader()}
       <div style="flex:1 1 auto;"></div>
-      <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">Add to OBS</button>
+      <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">${isOBS() ? 'Setup' : 'Add to OBS'}</button>
       <button class="sp-btn sp-btn-secondary" id="pl-back" style="padding:6px 12px; font-size:12px;">← Playlists</button>
     </header>
     <main class="sp-screen">

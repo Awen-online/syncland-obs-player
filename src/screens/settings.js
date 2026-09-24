@@ -149,17 +149,17 @@ export function renderSettings($app, { onBack }) {
         </div>
         <div class="sp-set-row">
           <div class="sp-set-copy">
-            <b>Overlay and dock setup</b>
-            <span>URLs to paste into OBS, with copy buttons.</span>
+            <b>Setup</b>
+            <span>How to add the player and the credit overlay to OBS.</span>
           </div>
           <button class="sp-btn sp-btn-secondary" id="st-obs" style="padding:7px 14px;font-size:12.5px;">Open</button>
         </div>
         <div class="sp-set-row">
           <div class="sp-set-copy">
-            <b>Sign out</b>
-            <span>Forgets the access token stored in this browser.</span>
+            <b>Disconnect</b>
+            <span>Forgets your player link here. The demo playlist comes back.</span>
           </div>
-          <button class="sp-btn sp-btn-secondary" id="st-out" style="padding:7px 14px;font-size:12.5px;">Sign out</button>
+          <button class="sp-btn sp-btn-secondary" id="st-out" style="padding:7px 14px;font-size:12.5px;">Disconnect</button>
         </div>
       </section>
     </main>`;

@@ -8,15 +8,15 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
     <header class="sp-header">
       ${brandHeader()}
       <div style="flex:1 1 auto;"></div>
-      <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">Add to OBS</button>
-      <button class="sp-btn sp-btn-secondary" id="pp-signout" style="padding: 6px 12px; font-size: 12px;">${isDemo() ? 'Sign in' : 'Sign out'}</button>
+      <button class="sp-btn sp-btn-secondary sp-obs-btn" id="obs-setup" style="padding:6px 12px; font-size:12px;">${isOBS() ? 'Setup' : 'Add to OBS'}</button>
+      <button class="sp-btn sp-btn-secondary" id="pp-signout" style="padding: 6px 12px; font-size: 12px;">${isDemo() ? 'Connect' : 'Disconnect'}</button>
     </header>
     <main class="sp-screen">
       <div>
         <div class="sp-eyebrow">${isDemo() ? 'Demo mode' : 'Choose a playlist'}</div>
         <h1 class="sp-h1">${isDemo() ? 'Try it now' : 'Your playlists'}</h1>
         <p class="sp-lead">${isDemo()
-          ? 'This is a sample playlist you can play straight away, no account needed. Every track is license-checked before it plays and credits its artist on screen. Sign in to use your own playlists.'
+          ? 'A sample playlist you can play straight away. Every track is licence-checked before it plays and credits its artist on screen. Connect your account to use your own playlists.'
           : 'Pick one to load into the player. Every track will be license-checked before it plays.'}</p>
       </div>
 
@@ -38,7 +38,19 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
   });
 
   if (isDemo()) wireConnect($app, () => renderPlaylistPicker($app, { onPick, onSignOut }));
-  loadAndRender($app.querySelector('#pp-list'), onPick);
+  const $list = $app.querySelector('#pp-list');
+  loadAndRender($list, onPick);
+  // A playlist made on the site shows up here without a reload: an OBS dock has
+  // no reload button. Stops once this screen is gone.
+  const refresh = () => {
+    if (!document.body.contains($list)) { cleanup(); return; }
+    if (!isDemo()) loadAndRender($list, onPick);
+  };
+  const timer = setInterval(refresh, 60000);
+  const onVis = () => { if (document.visibilityState === 'visible') refresh(); };
+  document.addEventListener('visibilitychange', onVis);
+  window.addEventListener('focus', refresh);
+  function cleanup() { clearInterval(timer); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', refresh); }
 }
 
 /**
@@ -47,28 +59,31 @@ export function renderPlaylistPicker($app, { onPick, onSignOut }) {
  * a normal browser tab does nothing for this panel.
  */
 function connectCard() {
-  const where = isOBS()
-    ? 'Paste your key here to load your own playlists. A key entered in your web browser does not reach OBS; OBS keeps its own storage, so it has to go in this panel.'
-    : 'You are in a web browser. To play on stream, add the dock to OBS with your personal dock URL from sync.land/account/tokens/. It connects in the same step.';
   return `
     <div class="sp-card sp-connect">
-      <div class="sp-connect-head"><span class="sp-connect-dot"></span><b>Not connected: playing the demo playlist</b></div>
-      <p class="sp-connect-copy">${where}</p>
+      <div class="sp-connect-head"><span class="sp-connect-dot"></span><b>Demo playlist. Not connected to your account.</b></div>
+      <p class="sp-connect-copy">Paste your player link to use your own playlists.</p>
       <div class="sp-connect-row">
-        <input type="password" id="pp-key" autocomplete="off" placeholder="sk_syncland_..." aria-label="Your Sync.Land key">
+        <input type="text" id="pp-key" autocomplete="off" spellcheck="false" placeholder="Paste your player link" aria-label="Your player link">
         <button class="sp-btn" id="pp-key-go" type="button">Connect</button>
       </div>
       <div id="pp-key-status"></div>
-      <p class="sp-connect-foot">No key yet? Make one at <a href="https://sync.land/account/tokens/" target="_blank">sync.land/account/tokens/</a>.</p>
+      <p class="sp-connect-foot">No link yet? Get one at <a href="https://sync.land/stream/" target="_blank">sync.land/stream</a></p>
     </div>`;
+}
+
+/** Whatever was pasted (the whole link, the bare key, with spaces or line breaks), find the key in it. */
+export function extractKey(raw) {
+  const m = String(raw || '').replace(/\s+/g, '').match(/sk_syncland_[A-Za-z0-9_-]+/);
+  return m ? m[0] : '';
 }
 
 function wireConnect($app, onDone) {
   const $in = $app.querySelector('#pp-key'), $go = $app.querySelector('#pp-key-go'), $st = $app.querySelector('#pp-key-status');
   if (!$in || !$go) return;
   const go = async () => {
-    const pat = $in.value.trim();
-    if (!pat) { $st.innerHTML = '<div class="sp-status err">Paste your key first.</div>'; return; }
+    const pat = extractKey($in.value);
+    if (!pat) { $st.innerHTML = '<div class="sp-status err">Paste your player link first.</div>'; return; }
     $go.disabled = true;
     $st.innerHTML = '<div class="sp-status info">Checking&hellip;</div>';
     saveToken(pat);
@@ -79,7 +94,7 @@ function wireConnect($app, onDone) {
     } catch (e) {
       clearToken();
       $go.disabled = false;
-      $st.innerHTML = '<div class="sp-status err">That key did not work. Check it was copied whole, or make a new one.</div>';
+      $st.innerHTML = '<div class="sp-status err">That link did not work. Copy it again from sync.land/stream, or make a new one there.</div>';
     }
   };
   $go.addEventListener('click', go);
@@ -94,7 +109,7 @@ async function loadAndRender($list, onPick) {
         <div class="sp-card">
           <p style="margin: 0; color: var(--sp-text-soft);">You don't have any playlists yet.</p>
           <p style="margin: 10px 0 0; font-size: 13px; color: var(--sp-text-muted);">
-            Create one at <a href="https://sync.land/account/playlists/" target="_blank">sync.land/account/playlists/</a>, then reload.
+            Make one at <a href="https://sync.land/account/playlists/" target="_blank">sync.land/account/playlists</a>. It shows up here on its own within a minute.
           </p>
         </div>
       `;
@@ -124,7 +139,7 @@ async function loadAndRender($list, onPick) {
     if (e && e.isAuth) {
       signOut();
       window.dispatchEvent(new CustomEvent('syncland:navigate', {
-        detail: { screen: 'auth', notice: 'Your access token is no longer valid. Sign in again to load your playlists.' },
+        detail: { screen: 'auth', notice: 'Your player link was turned off. Paste a new one from sync.land/stream to load your playlists.' },
       }));
       return;
     }

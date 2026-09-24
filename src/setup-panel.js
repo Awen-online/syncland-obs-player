@@ -1,3 +1,5 @@
+import { isDemo } from './api.js';
+import { remoteAudio } from './playback.js';
 /**
  * "Add to OBS" panel.
  *
@@ -36,6 +38,8 @@ function row(label, value) {
 
 export function openSetupPanel() {
   if (document.getElementById('sp-setup')) return;
+  const playerDone = !isDemo();
+  const overlayDone = remoteAudio();
 
   const el = document.createElement('div');
   el.id = 'sp-setup';
@@ -43,60 +47,48 @@ export function openSetupPanel() {
   el.innerHTML = `
     <div class="sp-setup" role="dialog" aria-modal="true" aria-labelledby="sp-setup-h">
       <div class="sp-setup-head">
-        <h2 id="sp-setup-h">Add Sync.Land to OBS</h2>
+        <h2 id="sp-setup-h">Set up Sync.Land in OBS</h2>
         <button class="sp-setup-x" id="sp-setup-x" type="button" aria-label="Close">&times;</button>
       </div>
       <div class="sp-setup-body">
 
-        <p class="sp-note sp-note-first">Two pieces, added in two different places.
-           The <b>dock</b> is your control panel: only you see it, in the OBS window.
-           The <b>overlay</b> is the credit your viewers see on stream.</p>
+        <p class="sp-note sp-note-first">Two things: the <b>player</b> (your controls, only you see it)
+           and the <b>overlay</b> (the credit your viewers see).</p>
 
         <div class="sp-step">
           <div class="sp-step-n">1</div>
           <div class="sp-step-c">
-            <h3>Copy your dock URL</h3>
-            <p>Make a key at <a href="https://sync.land/account/tokens/" target="_blank">sync.land/account/tokens/</a>.
-               The page gives you a dock URL with your key built in, so adding the dock also connects your playlists.</p>
+            <h3>Player ${playerDone ? '<span class="sp-tick">&#10003; Connected</span>' : ''}</h3>
+            ${playerDone
+              ? '<p>Your playlists are loaded.</p>'
+              : `<p>Get your player link at <a href="https://sync.land/stream/" target="_blank">sync.land/stream</a>.
+                 In OBS, click <b>Docks</b>, then <b>Custom Browser Docks</b>, paste it and click <b>Apply</b>.</p>
+                 <p class="sp-note">A Dock, not a Source. Added as a Source, the player shows on your stream and can&rsquo;t be clicked.</p>`}
           </div>
         </div>
 
         <div class="sp-step">
           <div class="sp-step-n">2</div>
           <div class="sp-step-c">
-            <h3>Add it as a Dock, not a Source</h3>
-            <p>In OBS: <b>Docks &rarr; Custom Browser Docks</b>. Name it Sync.Land, paste your dock URL, press <b>Apply</b>.
-               The panel appears in the OBS window and your playlists load.</p>
-            <p class="sp-note">Not under Sources. Added as a Source, the player shows on your stream and you can&rsquo;t click it.
-               No key yet? Use the plain URL below and paste your key into the dock itself.</p>
-            ${row('Plain dock URL', DOCK_URL)}
+            <h3>Overlay ${overlayDone ? '<span class="sp-tick">&#10003; On</span>' : ''}</h3>
+            ${overlayDone
+              ? '<p>Music and credit go to your stream.</p>'
+              : `<p>In OBS, click <b>+</b> under <b>Sources</b>, choose <b>Browser</b>. Paste this link, click <b>OK</b>,
+                 then press <b>Ctrl+F</b> (<b>Cmd+F</b> on a Mac) to fit it to your screen.</p>
+                 ${row('Overlay link', OVERLAY_URL)}`}
           </div>
         </div>
 
         <div class="sp-step">
           <div class="sp-step-n">3</div>
           <div class="sp-step-c">
-            <h3>Add the overlay as a Source</h3>
-            <p>In OBS: <b>Sources &rarr; + &rarr; Browser</b>. Paste the URL and set the size to match your canvas,
-               usually <b>1920 &times; 1080</b>.</p>
-            ${row('Overlay URL', OVERLAY_URL)}
-            <p class="sp-note"><b>Untick both</b> &ldquo;Shutdown source when not visible&rdquo; and
-               &ldquo;Refresh browser when scene becomes active&rdquo;. Left on, the overlay forgets
-               what is playing every time you change scene.</p>
-          </div>
-        </div>
-
-        <div class="sp-step">
-          <div class="sp-step-n">4</div>
-          <div class="sp-step-c">
-            <h3>Press play in the dock</h3>
-            <p>The overlay fades in with the track, its licence, and the attribution line required by that licence.
-               It hides when you pause.</p>
+            <h3>Press play</h3>
+            <p>The credit shows on your stream while music plays, and hides when you pause.</p>
           </div>
         </div>
 
         <details class="sp-more">
-          <summary>Other positions and styles</summary>
+          <summary>Overlay position and style</summary>
           <div class="sp-more-body">
             ${VARIANTS.map(([l, v]) => row(l, v)).join('')}
             <p class="sp-note">You can also tint it to match your scene by adding
@@ -104,9 +96,15 @@ export function openSetupPanel() {
           </div>
         </details>
 
-        <p class="sp-note sp-note-last">Both must run in the <b>same OBS</b>: the dock tells the
-           overlay what is playing through the browser they share. A browser tab outside OBS will not drive it,
-           and a key entered in a browser tab does not reach OBS.</p>
+        <details class="sp-more">
+          <summary>Not working?</summary>
+          <div class="sp-more-body">
+            <p class="sp-note"><b>&ldquo;Demo playlist&rdquo; in the player:</b> it is not connected. OBS keeps its own settings, separate from your web browser, so paste your player link into OBS, not a browser tab.</p>
+            <p class="sp-note"><b>No credit on stream:</b> check the overlay is in the scene you are streaming, above your game or camera, and press Ctrl+F on it. It only shows while a track plays.</p>
+            <p class="sp-note"><b>Both must be in the same OBS:</b> the player tells the overlay what is playing through the browser they share.</p>
+            <p class="sp-note">More at <a href="https://www.sync.land/help/" target="_blank">sync.land/help</a>.</p>
+          </div>
+        </details>
       </div>
     </div>`;
 
